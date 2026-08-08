@@ -1,0 +1,10 @@
+IMPORTANT — run this in Railway's Postgres console BEFORE deploying the backend.
+The new scheduling feature adds two columns to the assessments table, and
+create_tables.py only creates missing TABLES, not missing COLUMNS on tables
+that already exist. Without this, the backend will crash on any assessment
+query with a "column does not exist" error.
+
+How: Railway dashboard -> Postgres service -> Data tab (or Console tab) -> run:
+
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS active_from TIMESTAMPTZ;
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS active_until TIMESTAMPTZ;
