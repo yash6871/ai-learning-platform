@@ -1,10 +1,13 @@
-IMPORTANT — run this in Railway's Postgres console BEFORE deploying the backend.
-The new scheduling feature adds two columns to the assessments table, and
+IMPORTANT — run this in Supabase's SQL Editor BEFORE deploying the backend.
+
 create_tables.py only creates missing TABLES, not missing COLUMNS on tables
-that already exist. Without this, the backend will crash on any assessment
-query with a "column does not exist" error.
+that already exist. Without running this, the backend will crash with a
+"column does not exist" error the first time a mock interview score is
+logged.
 
-How: Railway dashboard -> Postgres service -> Data tab (or Console tab) -> run:
+-- New: custom total marks for a mock interview result (was hardcoded to /100)
+ALTER TABLE mock_interview_evaluation ADD COLUMN IF NOT EXISTS max_score FLOAT DEFAULT 100;
 
+-- (Older migration, keep if not already applied — safe to re-run, IF NOT EXISTS)
 ALTER TABLE assessments ADD COLUMN IF NOT EXISTS active_from TIMESTAMPTZ;
 ALTER TABLE assessments ADD COLUMN IF NOT EXISTS active_until TIMESTAMPTZ;

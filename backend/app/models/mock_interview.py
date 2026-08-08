@@ -34,5 +34,6 @@ class MockInterviewEvaluation(Base, BaseModelMixin):
     communication_score = Column(Float, nullable=True)
     technical_score = Column(Float, nullable=True)
     overall_score = Column(Float, nullable=True)
+    max_score = Column(Float, nullable=True, default=100)  # custom total (e.g. /10, /50) — not fixed to /100
     feedback_text = Column(Text, nullable=True)
     improvement_suggestions = Column(Text, nullable=True)

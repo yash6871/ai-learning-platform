@@ -180,9 +180,17 @@ def assessment_results(
 
     max_marks = None
     try:
-        qs = db.query(Question).filter(Question.id.in_(assessment.question_ids or [])).all()
-        if qs:
-            max_marks = sum(q.marks for q in qs)
+        # Questions live in two places: bank-sourced ones are listed in
+        # assessment.question_ids; inline-authored ones instead have
+        # questions.assessment_id set to this assessment. Counting only one
+        # source was undercounting (or zeroing out) max_marks, showing "?"
+        # to faculty even for assessments with real marks.
+        inline_qs = db.query(Question).filter(Question.assessment_id == assessment_id).all()
+        bank_ids = [qid for qid in (assessment.question_ids or []) if str(qid) not in {str(q.id) for q in inline_qs}]
+        bank_qs = db.query(Question).filter(Question.id.in_(bank_ids)).all() if bank_ids else []
+        all_qs = inline_qs + bank_qs
+        if all_qs:
+            max_marks = sum(q.marks for q in all_qs)
     except Exception:
         pass
 
@@ -222,6 +230,7 @@ def assessment_results(
             if mi.student_id not in mock_by_student:  # keep only the latest per student
                 mock_by_student[mi.student_id] = {
                     "overallScore": ev.overall_score,
+                    "maxScore": ev.max_score or 100,
                     "feedbackText": ev.feedback_text,
                     "recordedAt": mi.scheduled_at,
                 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ArcLoader from "../../../components/ArcLoader";
 import { studentJobsApi, interviewApi } from "../../../api/placementApi";
 import { Application, Interview } from "../../../types/placement";
 import StatusBadge from "../../../components/StatusBadge";
@@ -34,7 +35,7 @@ export default function ApplicationTrackerPage() {
   const interviewsFor = (applicationId: string) =>
     interviews.filter((i) => i.applicationId === applicationId);
 
-  if (loading) return <div className="p-6 text-gray-500">Loading your applications...</div>;
+  if (loading) return <ArcLoader />;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

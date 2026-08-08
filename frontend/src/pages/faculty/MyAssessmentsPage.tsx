@@ -29,7 +29,7 @@ interface ResultRow {
   violationCount: number;
   startedAt: string | null;
   submittedAt: string | null;
-  mockInterview: { overallScore: number | null; feedbackText: string | null; recordedAt: string | null } | null;
+  mockInterview: { overallScore: number | null; maxScore: number | null; feedbackText: string | null; recordedAt: string | null } | null;
 }
 
 interface ResultSummary {
@@ -122,17 +122,24 @@ export default function MyAssessmentsPage() {
   };
 
   const logMockInterviewScore = async (studentId: string, studentName: string) => {
-    const scoreStr = window.prompt(`Mock interview score for ${studentName} (out of 100):`);
+    const maxStr = window.prompt(`Total marks for ${studentName}'s mock interview (e.g. 10, 50, 100):`, "100");
+    if (maxStr === null) return;
+    const maxScore = Number(maxStr);
+    if (Number.isNaN(maxScore) || maxScore <= 0) {
+      setError("Total marks must be a positive number");
+      return;
+    }
+    const scoreStr = window.prompt(`Score obtained (out of ${maxScore}):`);
     if (scoreStr === null) return;
     const score = Number(scoreStr);
-    if (Number.isNaN(score) || score < 0 || score > 100) {
-      setError("Score must be a number between 0 and 100");
+    if (Number.isNaN(score) || score < 0 || score > maxScore) {
+      setError(`Score must be a number between 0 and ${maxScore}`);
       return;
     }
     const feedback = window.prompt("Feedback (optional):") || undefined;
     try {
       await apiClient.post("/api/v1/mock-interviews/manual-score", {
-        studentId, overallScore: score, feedbackText: feedback,
+        studentId, overallScore: score, maxScore, feedbackText: feedback,
       });
       if (results) loadResults(results.id, results.title, resultStatusFilter, resultBatchFilter, resultSearch);
     } catch { setError("Failed to log mock interview score"); }
@@ -140,11 +147,11 @@ export default function MyAssessmentsPage() {
 
   const exportResultsCsv = () => {
     if (!results) return;
-    const header = ["Rank", "Student", "Email", "Status", "Assessment Score", "Max Marks", "Mock Interview Score", "Violations", "Submitted At"];
+    const header = ["Rank", "Student", "Email", "Status", "Assessment Score", "Max Marks", "Mock Interview Score", "Mock Interview Max", "Violations", "Submitted At"];
     const lines = results.rows.map((r) => [
       r.rank ?? "", r.studentName, r.studentEmail, r.status,
       r.score ?? "", results.maxMarks ?? "",
-      r.mockInterview?.overallScore ?? "", r.violationCount,
+      r.mockInterview?.overallScore ?? "", r.mockInterview?.maxScore ?? "", r.violationCount,
       r.submittedAt ? new Date(r.submittedAt).toLocaleString() : "",
     ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
     const csv = [header.join(","), ...lines].join("\n");
@@ -454,7 +461,7 @@ export default function MyAssessmentsPage() {
                           <td className="py-2 pr-3">
                             {r.mockInterview ? (
                               <div>
-                                <span className="font-semibold text-gray-800">{r.mockInterview.overallScore} / 100</span>
+                                <span className="font-semibold text-gray-800">{r.mockInterview.overallScore} / {r.mockInterview.maxScore ?? 100}</span>
                                 {r.mockInterview.feedbackText && (
                                   <p className="text-gray-400 max-w-[160px] truncate" title={r.mockInterview.feedbackText}>{r.mockInterview.feedbackText}</p>
                                 )}

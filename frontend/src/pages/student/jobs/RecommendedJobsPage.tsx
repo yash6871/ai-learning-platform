@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ArcLoader from "../../../components/ArcLoader";
 import { studentJobsApi } from "../../../api/placementApi";
 import { RecommendedJob } from "../../../types/placement";
 import MatchScoreBadge from "../../../components/MatchScoreBadge";
@@ -51,7 +52,7 @@ export default function RecommendedJobsPage() {
       {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
 
       {loading ? (
-        <p className="text-gray-500">Finding the best matches for you...</p>
+        <ArcLoader label="Finding the best matches" />
       ) : (
         <div className="space-y-4">
           {jobs.map((j) => (

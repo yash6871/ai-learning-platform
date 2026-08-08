@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ArcLoader from "../../components/ArcLoader";
 import { interviewApi } from "../../api/placementApi";
 import { Interview } from "../../types/placement";
 import StatusBadge from "../../components/StatusBadge";
@@ -55,7 +56,7 @@ export default function ConductInterviewPage({ interviewId }: { interviewId: str
     }
   };
 
-  if (loading) return <div className="p-6 text-gray-500">Loading interview...</div>;
+  if (loading) return <ArcLoader />;
   if (!interview) return <div className="p-6 text-red-600">{error || "Interview not found."}</div>;
 
   return (

@@ -19,7 +19,8 @@ router = APIRouter(prefix="/mock-interviews", tags=["Mock Interview"])
 
 class ManualScoreEntry(BaseModel):
     student_id: UUID
-    overall_score: float = Field(ge=0, le=100)
+    overall_score: float = Field(ge=0)
+    max_score: float = Field(default=100, gt=0)
     feedback_text: Optional[str] = None
 
 
@@ -35,6 +36,9 @@ def record_manual_score(
     assessment results."""
     from app.models.mock_interview import MockInterview, MockInterviewEvaluation
 
+    if payload.overall_score > payload.max_score:
+        raise HTTPException(status_code=400, detail="Score cannot exceed the total marks")
+
     mi = MockInterview(
         student_id=payload.student_id,
         scheduled_by=current_user.id,
@@ -47,11 +51,12 @@ def record_manual_score(
     ev = MockInterviewEvaluation(
         mock_interview_id=mi.id,
         overall_score=payload.overall_score,
+        max_score=payload.max_score,
         feedback_text=payload.feedback_text,
     )
     db.add(ev)
     db.commit()
-    return {"mockInterviewId": str(mi.id), "overallScore": payload.overall_score}
+    return {"mockInterviewId": str(mi.id), "overallScore": payload.overall_score, "maxScore": payload.max_score}
 
 
 # ---------- Faculty: schedule + view ----------

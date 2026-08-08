@@ -34,6 +34,35 @@ Rules per type:
 """
 
 
+import re
+
+_CITATION_LINK = re.compile(r"\[\d+\]\(https?://[^\s)]+\)")
+_EMPTY_BRACKET_SHELL = re.compile(r"\[[\s,]*\]")  # leftover "[, ]" / "[]" once links are stripped
+
+
+def _strip_citations(text):
+    """Some AI providers/models occasionally emit markdown-style citation
+    links (e.g. "[[1](https://...), [2](https://...)]") even for a plain
+    generation prompt with no search grounding requested. These have no
+    place in a question a student is meant to answer, so strip them
+    unconditionally rather than trusting any one provider not to add them."""
+    if not isinstance(text, str):
+        return text
+    cleaned = _CITATION_LINK.sub("", text)
+    cleaned = _EMPTY_BRACKET_SHELL.sub("", cleaned)
+    return re.sub(r"[ \t]{2,}", " ", cleaned).strip()
+
+
+def _strip_citations_deep(value):
+    if isinstance(value, str):
+        return _strip_citations(value)
+    if isinstance(value, list):
+        return [_strip_citations_deep(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _strip_citations_deep(v) for k, v in value.items()}
+    return value
+
+
 class AIQuestionGenService:
     def __init__(self, db: Session):
         self.db = db
@@ -81,6 +110,7 @@ class AIQuestionGenService:
             type=payload.type, topic=payload.topic,
         )
         items, tokens_used = self.client.generate_json(prompt)
+        items = [_strip_citations_deep(item) for item in items]
 
         if payload.type == "mcq":
             for item in items:

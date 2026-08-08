@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ArcLoader from "../../components/ArcLoader";
 import { Link } from "react-router-dom";
 import { dashboardApi, assessmentApi } from "../../api/studentApi";
 import type { Dashboard as DashboardType, AvailableAssessment } from "../../types";
@@ -14,7 +15,7 @@ export default function Dashboard() {
     assessmentApi.available().then(setAssessments).catch(() => {});
   }, []);
 
-  if (loading) return <div className="text-gray-500">Loading dashboard...</div>;
+  if (loading) return <ArcLoader />;
   if (error) return <div className="text-red-600">{error}</div>;
   if (!data) return null;
 

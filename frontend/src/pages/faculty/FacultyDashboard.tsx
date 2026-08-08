@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ArcLoader from "../../components/ArcLoader";
 import { getMyBatches, getBatchStudents, createBatch } from "../../api/facultyApi";
 import { FacultyBatch, StudentInBatch } from "../../types";
 
@@ -77,7 +78,7 @@ export default function FacultyDashboard() {
       )}
 
       {loading ? (
-        <p className="text-slate-500 text-sm">Loading batches…</p>
+        <ArcLoader label="Loading batches" />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {batches.map((batch) => (

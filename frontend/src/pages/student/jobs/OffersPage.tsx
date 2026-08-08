@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ArcLoader from "../../../components/ArcLoader";
 import { studentJobsApi } from "../../../api/placementApi";
 import { Offer } from "../../../types/placement";
 import StatusBadge from "../../../components/StatusBadge";
@@ -33,7 +34,7 @@ export default function StudentOffersPage() {
     }
   };
 
-  if (loading) return <div className="p-6 text-gray-500">Loading your offers...</div>;
+  if (loading) return <ArcLoader />;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">

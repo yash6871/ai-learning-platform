@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ArcLoader from "../../components/ArcLoader";
 import { hrApi } from "../../api/placementApi";
 import { PlacementAnalytics } from "../../types/placement";
 
@@ -22,7 +23,7 @@ export default function AnalyticsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="p-6 text-gray-500">Loading analytics...</div>;
+  if (loading) return <ArcLoader />;
   if (!data) return <div className="p-6 text-gray-500">No data available.</div>;
 
   return (
