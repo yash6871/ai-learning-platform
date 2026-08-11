@@ -129,7 +129,7 @@ export const BulkUploadPage: React.FC = () => {
             className="block w-full rounded-lg border border-dashed border-slate-300 p-6 text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
           />
           <PrimaryButton type="submit" disabled={!file || loading}>
-            {loading ? "Uploading..." : "Upload and register"}
+            {loading ? (<span className="inline-flex items-center gap-2"><span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /> Uploading…</span>) : "Upload and register"}
           </PrimaryButton>
 
           {result && (

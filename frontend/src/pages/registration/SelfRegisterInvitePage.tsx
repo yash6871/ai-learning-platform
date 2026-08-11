@@ -107,7 +107,7 @@ export const SelfRegisterInvitePage: React.FC = () => {
         </label>
 
         <PrimaryButton type="submit" disabled={loading} className="w-full">
-          {loading ? "Submitting..." : "Complete registration"}
+          {loading ? (<span className="inline-flex items-center gap-2"><span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /> Submitting…</span>) : "Complete registration"}
         </PrimaryButton>
       </form>
     </AuthLayout>

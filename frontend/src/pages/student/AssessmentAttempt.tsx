@@ -45,11 +45,20 @@ function ExamWatermark({ studentName }: { studentName: string }) {
 }
 
 // ── Webcam ────────────────────────────────────────────────────────────────────
-function WebcamMonitor({ resultId, violCount, onCamDenied }: { resultId: string; violCount: number; onCamDenied: () => void }) {
+declare global {
+  interface Window { tf?: any; cocoSsd?: any; }
+}
+
+function WebcamMonitor({ resultId, violCount, onCamDenied, onViolation }:
+  { resultId: string; violCount: number; onCamDenied: () => void; onViolation: (msg: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const onViolationRef = useRef(onViolation);
+  onViolationRef.current = onViolation; // always call the latest closure without re-running the effect below
+
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
+    let detectTimer: ReturnType<typeof setInterval>;
     let cancelled = false;
     navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
       .then((stream) => {
@@ -73,15 +82,68 @@ function WebcamMonitor({ resultId, violCount, onCamDenied }: { resultId: string;
           }, "image/jpeg", 0.7);
         };
         timer = setInterval(snap, SNAPSHOT_INTERVAL_MS);
+
+        // ── On-device proctoring detection (multiple people / phone / absence) ──
+        let model: any = null;
+        let noPersonSinceMs: number | null = null;
+        let multiPersonStreak = 0;
+        let phoneAlreadyFlaggedAt = 0;
+        const ABSENCE_LIMIT_MS = 30_000;
+
+        const loadModel = async () => {
+          for (let i = 0; i < 20 && !(window.cocoSsd); i++) await new Promise(r => setTimeout(r, 500));
+          if (!window.cocoSsd || cancelled) return;
+          try { model = await window.cocoSsd.load({ base: "lite_mobilenet_v2" }); } catch { /* detection stays disabled if the model can't load */ }
+        };
+        loadModel();
+
+        const runDetection = async () => {
+          if (!model || !videoRef.current || cancelled) return;
+          let predictions: any[] = [];
+          try { predictions = await model.detect(videoRef.current); } catch { return; }
+
+          const persons = predictions.filter(p => p.class === "person" && p.score > 0.55);
+          const phone = predictions.find(p => p.class === "cell phone" && p.score > 0.5);
+          const now = Date.now();
+
+          if (persons.length === 0) {
+            if (noPersonSinceMs === null) noPersonSinceMs = now;
+            else if (now - noPersonSinceMs >= ABSENCE_LIMIT_MS) {
+              onViolationRef.current("No one detected in the camera frame for over 30 seconds.");
+              noPersonSinceMs = null; // reset window so it doesn't refire every tick
+            }
+          } else {
+            noPersonSinceMs = null;
+          }
+
+          if (persons.length > 1) {
+            multiPersonStreak += 1;
+            // require 2 consecutive detections (~12s apart) to avoid a
+            // one-frame false positive (e.g. someone briefly walking by)
+            if (multiPersonStreak >= 2) {
+              onViolationRef.current("Multiple people detected in the camera frame.");
+              multiPersonStreak = 0;
+            }
+          } else {
+            multiPersonStreak = 0;
+          }
+
+          if (phone && now - phoneAlreadyFlaggedAt > 20_000) {
+            phoneAlreadyFlaggedAt = now;
+            onViolationRef.current("A mobile phone was detected in the camera frame.");
+          }
+        };
+        detectTimer = setInterval(runDetection, 6_000);
       })
       .catch(onCamDenied);
     return () => {
       cancelled = true;
       clearInterval(timer);
+      clearInterval(detectTimer);
       streamRef.current?.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     };
-  }, [resultId, violCount, onCamDenied]);
+  }, [resultId, onCamDenied]);
   return (
     <div className="fixed top-4 left-4 z-50 rounded-lg overflow-hidden border-2 border-red-500 shadow-lg" style={{ width: 120, height: 90 }}>
       <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
@@ -140,15 +202,15 @@ function CodeEditor({ questionId, value, onChange, language = "python", sampleTe
   return (
     <div className="space-y-2">
       {sampleTestCases && sampleTestCases.length > 0 && (
-        <div className="rounded-lg border border-indigo-200 bg-indigo-50 overflow-hidden text-xs">
-          <div className="px-3 py-1.5 bg-indigo-100 text-indigo-800 font-semibold">
+        <div className="rounded-lg border border-indigo-500/40 bg-slate-900 overflow-hidden text-xs">
+          <div className="px-3 py-1.5 bg-indigo-600 text-white font-semibold">
             📋 Sample test case{sampleTestCases.length > 1 ? "s" : ""} — your code must produce this exact output
           </div>
-          <div className="divide-y divide-indigo-100">
+          <div className="divide-y divide-slate-700">
             {sampleTestCases.map((tc, i) => (
               <div key={i} className="px-3 py-2 font-mono grid grid-cols-2 gap-2">
-                <div><span className="text-indigo-400">Input:</span> <span className="text-indigo-900">{tc.input || "(none)"}</span></div>
-                <div><span className="text-indigo-400">Expected output:</span> <span className="text-indigo-900">{tc.expectedOutput}</span></div>
+                <div><span className="text-indigo-300 font-semibold">Input:</span> <span className="text-white">{tc.input || "(none)"}</span></div>
+                <div><span className="text-indigo-300 font-semibold">Expected output:</span> <span className="text-white">{tc.expectedOutput}</span></div>
               </div>
             ))}
           </div>
@@ -244,6 +306,8 @@ export default function AssessmentAttempt() {
   const [terminatedHelp, setTerminatedHelp] = useState("");
   const [helpSent, setHelpSent] = useState(false);
   const [camDenied, setCamDenied] = useState(false);
+  const [beginning, setBeginning] = useState(false);
+  const handleCamDenied = useCallback(() => setCamDenied(true), []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerSubmit>>({});
   const [result, setResult] = useState<AssessmentResult | null>(null);
@@ -337,25 +401,29 @@ export default function AssessmentAttempt() {
   }, []);
 
   const beginTest = async () => {
+    setBeginning(true);
     try { await enterFullscreen(); } catch { }
     setStarted(true);
+    setBeginning(false);
   };
+
+  const flagViolation = useCallback((msg: string) => {
+    if (submittedRef.current || terminated) return;
+    violationsRef.current += 1;
+    setViolations(violationsRef.current);
+    setLocked(true);
+    if (violationsRef.current >= MAX_VIOLATIONS) {
+      setWarning("Too many violations — your test has been terminated.");
+      handleTerminate();
+    } else {
+      setWarning(`${msg} Violation ${violationsRef.current}/${MAX_VIOLATIONS}. At ${MAX_VIOLATIONS} your test is terminated.`);
+    }
+  }, [terminated, handleTerminate]);
 
   // ── Lockdown listeners ────────────────────────────────────────────────────
   useEffect(() => {
     if (!attempt || result || !started || terminated) return;
-    const flag = (msg: string) => {
-      if (submittedRef.current) return;
-      violationsRef.current += 1;
-      setViolations(violationsRef.current);
-      setLocked(true);
-      if (violationsRef.current >= MAX_VIOLATIONS) {
-        setWarning("Too many violations — your test has been terminated.");
-        handleTerminate();
-      } else {
-        setWarning(`${msg} Violation ${violationsRef.current}/${MAX_VIOLATIONS}. At ${MAX_VIOLATIONS} your test is terminated.`);
-      }
-    };
+    const flag = flagViolation;
     const onVis = () => { if (document.hidden) flag("Tab switched."); };
     const onBlur = () => flag("Window lost focus.");
     const onFs = () => { if (!isFullscreen()) flag("Fullscreen exited."); };
@@ -480,8 +548,9 @@ export default function AssessmentAttempt() {
           </ul>
         </div>
         {camDenied && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">⚠️ Camera access denied. Session will be flagged for manual review.</p>}
-        <button onClick={beginTest} className="w-full px-4 py-3 bg-primary text-white rounded-lg font-semibold">
-          Allow camera & begin — I understand the rules
+        <button onClick={beginTest} disabled={beginning}
+          className="w-full px-4 py-3 bg-primary text-white rounded-lg font-semibold disabled:opacity-60 flex items-center justify-center gap-2">
+          {beginning ? <><span className="text-xs font-black">ARC</span><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Starting…</> : "Allow camera & begin — I understand the rules"}
         </button>
       </div>
     </div>
@@ -512,7 +581,7 @@ export default function AssessmentAttempt() {
   return (
     <>
       <ExamWatermark studentName={studentName} />
-      <WebcamMonitor resultId={attempt.resultId} violCount={violations} onCamDenied={() => setCamDenied(true)} />
+      <WebcamMonitor resultId={attempt.resultId} violCount={violations} onCamDenied={handleCamDenied} onViolation={flagViolation} />
 
       {/* Lock overlay */}
       {locked && (

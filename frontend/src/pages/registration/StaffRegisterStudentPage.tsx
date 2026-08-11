@@ -177,7 +177,7 @@ export const StaffRegisterStudentPage: React.FC = () => {
           </label>
 
           <PrimaryButton type="submit" disabled={loading}>
-            {loading ? "Registering..." : "Register student"}
+            {loading ? (<span className="inline-flex items-center gap-2"><span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /> Registering…</span>) : "Register student"}
           </PrimaryButton>
         </form>
       </div>

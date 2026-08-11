@@ -52,7 +52,7 @@ export default function ResumeBuilder() {
         <textarea className="border rounded-md px-3 py-2 w-full" rows={3} placeholder="Achievements (one per line)" value={achievements} onChange={(e) => setAchievements(e.target.value)} />
         <input className="border rounded-md px-3 py-2 w-full" placeholder="Target role (optional)" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
         <button onClick={generate} disabled={loading} className="bg-slate-800 text-white px-4 py-2 rounded-md text-sm disabled:opacity-50">
-          {loading ? "Generating..." : "Generate Resume"}
+          {loading ? (<span className="inline-flex items-center gap-2"><span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /> Generating…</span>) : "Generate Resume"}
         </button>
       </div>
 

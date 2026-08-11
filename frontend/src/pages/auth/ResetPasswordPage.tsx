@@ -51,7 +51,7 @@ export const ResetPasswordPage: React.FC = () => {
           onChange={(e) => setNewPassword(e.target.value)}
         />
         <PrimaryButton type="submit" disabled={loading} className="w-full">
-          {loading ? "Saving..." : "Reset password"}
+          {loading ? (<span className="inline-flex items-center gap-2"><span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /> Saving…</span>) : "Reset password"}
         </PrimaryButton>
       </form>
     </AuthLayout>

@@ -31,7 +31,7 @@ export const ForgotPasswordPage: React.FC = () => {
         <SuccessBanner message={success} />
         <Field label="Email address" id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <PrimaryButton type="submit" disabled={loading} className="w-full">
-          {loading ? "Sending..." : "Send reset link"}
+          {loading ? (<span className="inline-flex items-center gap-2"><span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /> Sending…</span>) : "Send reset link"}
         </PrimaryButton>
         <p className="text-center text-sm text-slate-500">
           <Link to="/login" className="font-medium text-brand-600 hover:text-brand-700">

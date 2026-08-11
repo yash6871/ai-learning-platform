@@ -47,7 +47,7 @@ export const RegisterPage: React.FC = () => {
           onChange={update("password")}
         />
         <PrimaryButton type="submit" disabled={loading} className="w-full">
-          {loading ? "Creating account..." : "Create account"}
+          {loading ? (<span className="inline-flex items-center gap-2"><span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /> Creating account…</span>) : "Create account"}
         </PrimaryButton>
         <p className="text-center text-sm text-slate-500">
           Already have an account?{" "}

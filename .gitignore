@@ -17,4 +17,3 @@ frontend/.env
 .DS_Store
 *.log
 backend/snapshots/*.jpg 
-frontend/.env.local 
