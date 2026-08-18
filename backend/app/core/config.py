@@ -34,7 +34,10 @@ class Settings(BaseSettings):
     # Not to be confused with "Grok" (xAI), which does not have a free tier.
     AI_PROVIDER: str = "gemini"  # "gemini" or "groq"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    # llama-3.3-70b-versatile was deprecated by Groq on 2026-06-17; this is
+    # their recommended replacement (openai/gpt-oss-120b), which also
+    # handles the JSON-mode question generation prompts reliably.
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
 
     # Judge0 (code execution)
     JUDGE0_API_URL: str = "https://judge0-ce.p.rapidapi.com"
