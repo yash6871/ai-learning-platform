@@ -615,18 +615,24 @@ export default function AssessmentAttempt() {
       )}
 
       <div className="min-h-screen bg-slate-50 flex flex-col select-none">
-        <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
+        <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0 sticky top-0 z-30 flex-wrap gap-y-2">
           <div>
             <h1 className="text-base font-bold text-gray-800 leading-tight">{attempt.title}</h1>
             <p className="text-xs text-gray-400">Q{currentIndex+1}/{attempt.questions.length} · {answeredIndexes.size} answered</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             {violations > 0 && (
               <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">
                 ⚠️ {violations} violation{violations > 1 ? "s" : ""}
               </span>
             )}
             <Timer durationMinutes={attempt.duration} startedAt={attempt.startedAt} onExpire={handleSubmit} />
+            <button disabled={currentIndex === 0} onClick={() => setCurrentIndex(i => Math.max(0, i-1))}
+              className="px-3 py-2 bg-gray-100 rounded-lg text-sm disabled:opacity-40">Previous</button>
+            {currentIndex < attempt.questions.length-1 ? (
+              <button onClick={() => setCurrentIndex(i => Math.min(attempt.questions.length-1, i+1))}
+                className="px-3 py-2 bg-primary text-white rounded-lg text-sm">Next</button>
+            ) : null}
             <button onClick={handleSubmit} disabled={submitting}
               className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">
               {submitting ? "Submitting…" : "Submit"}
@@ -681,19 +687,6 @@ export default function AssessmentAttempt() {
                 )}
               </div>
             )}
-            <div className="flex justify-between">
-              <button disabled={currentIndex === 0} onClick={() => setCurrentIndex(i => Math.max(0, i-1))}
-                className="px-4 py-2 bg-gray-100 rounded-lg text-sm disabled:opacity-40">Previous</button>
-              {currentIndex < attempt.questions.length-1 ? (
-                <button onClick={() => setCurrentIndex(i => Math.min(attempt.questions.length-1, i+1))}
-                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm">Next</button>
-              ) : (
-                <button onClick={handleSubmit} disabled={submitting}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm disabled:opacity-50">
-                  {submitting ? "Submitting…" : "Submit Assessment"}
-                </button>
-              )}
-            </div>
           </div>
           <QuestionNavigator totalQuestions={attempt.questions.length} currentIndex={currentIndex}
             answeredIndexes={answeredIndexes} onNavigate={setCurrentIndex} />

@@ -2,22 +2,34 @@ import { useEffect, useState } from "react";
 import ArcLoader from "../../components/ArcLoader";
 import { Link } from "react-router-dom";
 import { dashboardApi, assessmentApi } from "../../api/studentApi";
-import type { Dashboard as DashboardType, AvailableAssessment } from "../../types";
+import type { Dashboard as DashboardType, AvailableAssessment, AssessmentHistoryItem } from "../../types";
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardType | null>(null);
   const [assessments, setAssessments] = useState<AvailableAssessment[]>([]);
+  const [history, setHistory] = useState<AssessmentHistoryItem[]>([]);
+  const [batches, setBatches] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     dashboardApi.get().then(setData).catch(() => setError("Failed to load dashboard")).finally(() => setLoading(false));
     assessmentApi.available().then(setAssessments).catch(() => {});
+    assessmentApi.history().then(setHistory).catch(() => {});
+    assessmentApi.historyBatches().then(setBatches).catch(() => {});
   }, []);
 
   if (loading) return <ArcLoader />;
   if (error) return <div className="text-red-600">{error}</div>;
   if (!data) return null;
+
+  const completed = history.filter((i) => i.status === "completed");
+  const scored = completed.filter((i) => i.maxScore && i.maxScore > 0);
+  const avgPercent = scored.length
+    ? Math.round((scored.reduce((sum, i) => sum + (i.score / (i.maxScore as number)) * 100, 0) / scored.length) * 10) / 10
+    : null;
+  const ranked = completed.filter((i) => i.rank != null);
+  const bestRank = ranked.length ? Math.min(...ranked.map((i) => i.rank as number)) : null;
 
   return (
     <div className="space-y-6">
@@ -26,9 +38,15 @@ export default function Dashboard() {
         <p className="text-gray-500">Here's what's happening with your learning journey.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard label="Course Progress" value={`${data.progressPercent}%`} />
         <StatCard label="Attendance" value={`${data.attendancePercent}%`} />
+        <StatCard label="Assessments Taken" value={String(history.length)} />
+        <StatCard label="Average Score" value={avgPercent !== null ? `${avgPercent}%` : "—"} />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
+        <StatCard label="Best Rank" value={bestRank !== null ? `#${bestRank}` : "—"} />
+        <StatCard label={`Batch${batches.length !== 1 ? "es" : ""}`} value={batches.length ? batches.map((b) => b.name).join(", ") : "—"} small />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -96,11 +114,11 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
       <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-3xl font-bold text-primary mt-1">{value}</p>
+      <p className={`${small ? "text-lg" : "text-3xl"} font-bold text-primary mt-1`}>{value}</p>
     </div>
   );
 }

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { assessmentApi } from "../api/studentApi";
 
 type IconProps = { className?: string };
 const icon = (path: React.ReactNode) => ({ className = "h-5 w-5" }: IconProps) => (
@@ -209,6 +210,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("arc-nav-collapsed") === "1");
+  const [myBatches, setMyBatches] = useState<{ id: string; name: string }[]>([]);
 
   const toggleCollapsed = () => {
     setCollapsed((v) => { localStorage.setItem("arc-nav-collapsed", !v ? "1" : "0"); return !v; });
@@ -218,6 +220,13 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const isStudent = user?.role === "student";
   const brandTitle = isStudent ? "ARC Students Portal" : "ARC Technologies & Institutions";
   const brandSubtitle = isStudent ? "Learning, Assessments & Placement" : "AI Learning & Placement Platform";
+
+  useEffect(() => {
+    if (isStudent) {
+      assessmentApi.historyBatches().then(setMyBatches).catch(() => {});
+    }
+  }, [isStudent]);
+
 
   const groups = NAV_GROUPS.map((g) => ({
     ...g,
@@ -311,6 +320,11 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {isStudent && myBatches.length > 0 && (
+              <span className="hidden sm:inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
+                🎓 {myBatches.map((b) => b.name).join(", ")}
+              </span>
+            )}
             <button onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
               {theme === "dark" ? <Icons.sun className="h-4 w-4" /> : <Icons.moon className="h-4 w-4" />}
             </button>
