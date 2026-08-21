@@ -12,6 +12,7 @@ class BatchCreate(BaseModel):
     trainerId: Optional[UUID] = None
     startDate: Optional[date] = None
     endDate: Optional[date] = None
+    batchTime: Optional[str] = None
 
 
 class BatchOut(BaseModel):
@@ -24,6 +25,7 @@ class BatchOut(BaseModel):
     trainerId: Optional[UUID] = None
     startDate: Optional[date] = None
     endDate: Optional[date] = None
+    batchTime: Optional[str] = None
     createdAt: datetime
     studentCount: Optional[int] = 0
 

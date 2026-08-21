@@ -61,3 +61,29 @@ def batch_assignments_progress(
     current_user: CurrentUser = Depends(faculty_or_trainer),
 ):
     return BatchService(db).assignments_progress(batch_id)
+
+
+@router.get("/my-summary", summary="My lectures/assessments/mocks activity summary")
+def my_summary(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(faculty_or_trainer),
+):
+    return BatchService(db).faculty_summary(current_user.id)
+
+
+@router.get("/batches-summary", summary="Batches table: dates, delay, syllabus %, batch time, counts")
+def batches_summary(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(faculty_or_trainer),
+):
+    is_admin = current_user.role in ("admin", "super_admin")
+    return BatchService(db).batches_summary(current_user.id, is_admin=is_admin)
+
+
+@router.get("/batches/{batch_id}/detail", summary="Single batch detail drill-down")
+def batch_detail(
+    batch_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(faculty_or_trainer),
+):
+    return BatchService(db).batch_detail(batch_id)

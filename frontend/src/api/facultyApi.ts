@@ -30,6 +30,52 @@ export interface BatchAssignmentProgress {
 export const getBatchAssignmentsProgress = (batchId: string) =>
   apiClient.get<{ batchId: string; assignments: BatchAssignmentProgress[] }>(`/faculty/batches/${batchId}/assignments-progress`).then((r) => r.data.assignments);
 
+export interface FacultyActivitySummary {
+  lecturesTaken: number;
+  onlineClasses: number;
+  offlineClasses: number;
+  assessmentsCreated: number;
+  mocksScheduled: number;
+}
+
+export const getMySummary = () =>
+  apiClient.get<FacultyActivitySummary>("/faculty/my-summary").then((r) => r.data);
+
+export interface BatchSummaryRow {
+  batchId: string;
+  batchName: string;
+  course: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  delayedByDays: number;
+  syllabusPercent: number;
+  batchTime: string | null;
+  studentsCount: number;
+  assessmentsGiven: number;
+  mocksGiven: number;
+}
+
+export const getBatchesSummary = () =>
+  apiClient.get<BatchSummaryRow[]>("/faculty/batches-summary").then((r) => r.data);
+
+export interface BatchDetail {
+  batchId: string;
+  batchName: string;
+  course: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  delayedByDays: number;
+  syllabusPercent: number;
+  batchTime: string | null;
+  assessmentsGiven: number;
+  studentsCount: number;
+  activeStudents: number;
+  inactiveStudents: number;
+}
+
+export const getBatchDetail = (batchId: string) =>
+  apiClient.get<BatchDetail>(`/faculty/batches/${batchId}/detail`).then((r) => r.data);
+
 // ---------- Attendance ----------
 export const markAttendance = (batchId: string, date: string, entries: AttendanceEntry[]) =>
   apiClient

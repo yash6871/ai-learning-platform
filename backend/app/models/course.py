@@ -37,6 +37,7 @@ class Batch(BaseModel):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     status: Mapped[str] = mapped_column(String(30), default="active")
+    batch_time: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # e.g. "10:00 AM - 12:00 PM"
 
     course: Mapped["Course"] = relationship("Course", back_populates="batches")
 

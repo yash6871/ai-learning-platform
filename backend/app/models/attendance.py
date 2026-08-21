@@ -18,3 +18,4 @@ class Attendance(Base, BaseModelMixin):
     status = Column(String(20), nullable=False, default="present")  # present | absent | late
     marked_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     method = Column(String(30), nullable=False, default="manual")  # manual | face_recognition
+    mode = Column(String(20), nullable=False, default="offline")  # online | offline — which kind of class session this was

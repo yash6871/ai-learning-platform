@@ -1,130 +1,151 @@
 import { useEffect, useState } from "react";
-import { getMyBatches, getBatchStudents, getBatchAssignmentsProgress, BatchAssignmentProgress } from "../../api/facultyApi";
+import {
+  getBatchesSummary, getBatchDetail, getMySummary,
+  BatchSummaryRow, BatchDetail, FacultyActivitySummary,
+} from "../../api/facultyApi";
 import ArcLoader from "../../components/ArcLoader";
-import { FacultyBatch, StudentInBatch } from "../../types";
+
+function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-4">
+      <p className="text-[11px] text-slate-400 uppercase font-semibold">{label}</p>
+      <p className="text-xl font-bold text-slate-800 mt-1">{value}</p>
+    </div>
+  );
+}
 
 export default function FacultyDashboard() {
-  const [batches, setBatches] = useState<FacultyBatch[]>([]);
-  const [selectedBatch, setSelectedBatch] = useState<FacultyBatch | null>(null);
-  const [students, setStudents] = useState<StudentInBatch[]>([]);
-  const [assignments, setAssignments] = useState<BatchAssignmentProgress[]>([]);
+  const [summary, setSummary] = useState<FacultyActivitySummary | null>(null);
+  const [batches, setBatches] = useState<BatchSummaryRow[]>([]);
+  const [detail, setDetail] = useState<BatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    loadBatches();
+    setLoading(true);
+    Promise.all([getMySummary(), getBatchesSummary()])
+      .then(([s, b]) => { setSummary(s); setBatches(b); })
+      .finally(() => setLoading(false));
   }, []);
 
-  const loadBatches = async () => {
-    setLoading(true);
-    const data = await getMyBatches();
-    setBatches(data);
-    setLoading(false);
-  };
-
-  const openBatch = async (batch: FacultyBatch) => {
-    setSelectedBatch(batch);
-    const [s, a] = await Promise.all([
-      getBatchStudents(batch.id),
-      getBatchAssignmentsProgress(batch.id).catch(() => []),
-    ]);
-    setStudents(s);
-    setAssignments(a);
+  const openDetail = async (batchId: string) => {
+    setDetailLoading(true);
+    try {
+      const d = await getBatchDetail(batchId);
+      setDetail(d);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—");
 
+  if (loading) return <ArcLoader label="Loading dashboard" />;
+
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div>
         <h1 className="text-2xl font-semibold text-slate-800">Faculty Dashboard</h1>
         <p className="text-sm text-slate-400 mt-1">
           Batches are created and assigned by Admin. Contact Admin to get a new batch assigned to you.
         </p>
       </div>
 
-      {loading ? (
-        <ArcLoader label="Loading batches" />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {batches.map((batch) => (
-            <button
-              key={batch.id}
-              onClick={() => openBatch(batch)}
-              className={`text-left bg-white border rounded-xl p-4 hover:shadow-md transition ${
-                selectedBatch?.id === batch.id ? "border-indigo-500 ring-1 ring-indigo-300" : "border-slate-200"
-              }`}
-            >
-              <h3 className="font-semibold text-slate-800">{batch.name}</h3>
-              <p className="text-sm text-slate-500">{batch.course || "—"}</p>
-              <p className="text-xs text-slate-400 mt-2">{batch.studentCount} students</p>
-              <p className="text-xs text-slate-400 mt-1">
-                {fmtDate(batch.startDate)} → {fmtDate(batch.endDate)}
-              </p>
-            </button>
-          ))}
-          {batches.length === 0 && (
-            <p className="text-slate-400 text-sm">No batches assigned yet.</p>
-          )}
+      {/* My activity summary */}
+      {summary && (
+        <div>
+          <h2 className="text-sm font-semibold text-slate-500 uppercase mb-2">My Activity</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <StatCard label="Lectures Taken" value={summary.lecturesTaken} />
+            <StatCard label="Online Classes" value={summary.onlineClasses} />
+            <StatCard label="Offline Classes" value={summary.offlineClasses} />
+            <StatCard label="Assessments Given" value={summary.assessmentsCreated} />
+            <StatCard label="Mocks Scheduled" value={summary.mocksScheduled} />
+          </div>
         </div>
       )}
 
-      {selectedBatch && (
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-slate-800">
-                Students in {selectedBatch.name}
-              </h2>
-              <span className="text-xs text-slate-400">
-                {fmtDate(selectedBatch.startDate)} → {fmtDate(selectedBatch.endDate)}
-              </span>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500 border-b border-slate-100">
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((s) => (
-                  <tr key={s.id} className="border-b border-slate-50">
-                    <td className="py-2">{s.name}</td>
-                    <td className="py-2 text-slate-500">{s.email}</td>
-                  </tr>
-                ))}
-                {students.length === 0 && (
-                  <tr>
-                    <td colSpan={2} className="py-3 text-slate-400">No students added yet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <h2 className="font-semibold text-slate-800 mb-3">Assignments — completion in {selectedBatch.name}</h2>
-            {assignments.length === 0 ? (
-              <p className="text-sm text-slate-400">No assignments on the platform yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {assignments.map((a) => {
-                  const pct = a.totalStudents > 0 ? Math.round((a.submittedCount / a.totalStudents) * 100) : 0;
-                  return (
-                    <div key={a.assignmentId}>
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium text-slate-700">{a.title}</p>
-                        <p className="text-xs text-slate-400">
-                          {a.submittedCount}/{a.totalStudents} submitted · due {fmtDate(a.dueDate)} · {a.maxMarks} marks
-                        </p>
+      {/* Batches table */}
+      <div>
+        <h2 className="text-sm font-semibold text-slate-500 uppercase mb-2">
+          Assigned Batches ({batches.length})
+        </h2>
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-4 py-3 text-left">Batch</th>
+                <th className="px-4 py-3 text-left">Start</th>
+                <th className="px-4 py-3 text-left">Expected End</th>
+                <th className="px-4 py-3 text-left">Delayed By</th>
+                <th className="px-4 py-3 text-left">Syllabus</th>
+                <th className="px-4 py-3 text-left">Batch Time</th>
+                <th className="px-4 py-3 text-left">Students</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {batches.map((b) => (
+                <tr key={b.batchId} onClick={() => openDetail(b.batchId)}
+                  className="cursor-pointer hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-slate-800">{b.batchName}</p>
+                    <p className="text-xs text-slate-400">{b.course || "—"}</p>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{fmtDate(b.startDate)}</td>
+                  <td className="px-4 py-3 text-slate-600">{fmtDate(b.endDate)}</td>
+                  <td className="px-4 py-3">
+                    {b.delayedByDays > 0 ? (
+                      <span className="text-red-600 font-semibold">{b.delayedByDays} days</span>
+                    ) : (
+                      <span className="text-emerald-600">On track</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full bg-indigo-500" style={{ width: `${b.syllabusPercent}%` }} />
                       </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                      </div>
+                      <span className="text-xs text-slate-500">{b.syllabusPercent}%</span>
                     </div>
-                  );
-                })}
-              </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{b.batchTime || "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">{b.studentsCount}</td>
+                </tr>
+              ))}
+              {batches.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">No batches assigned yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Batch detail modal */}
+      {(detail || detailLoading) && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
+          <div className="bg-white rounded-xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+            {detailLoading || !detail ? (
+              <ArcLoader label="Loading batch detail" />
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="font-semibold text-slate-800 text-lg">{detail.batchName}</h2>
+                    <p className="text-xs text-slate-400">{detail.course || "—"}</p>
+                  </div>
+                  <button onClick={() => setDetail(null)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <StatCard label="Start Date" value={fmtDate(detail.startDate)} />
+                  <StatCard label="Expected End" value={fmtDate(detail.endDate)} />
+                  <StatCard label="Delayed By" value={detail.delayedByDays > 0 ? `${detail.delayedByDays} days` : "On track"} />
+                  <StatCard label="Syllabus" value={`${detail.syllabusPercent}%`} />
+                  <StatCard label="Batch Time" value={detail.batchTime || "—"} />
+                  <StatCard label="Assessments Given" value={detail.assessmentsGiven} />
+                  <StatCard label="Total Students" value={detail.studentsCount} />
+                  <StatCard label="Active / Inactive" value={`${detail.activeStudents} / ${detail.inactiveStudents}`} />
+                </div>
+              </>
             )}
           </div>
         </div>
