@@ -59,7 +59,7 @@ function WebcamMonitor({ resultId, violCount, onCamDenied, onViolation }:
     let timer: ReturnType<typeof setInterval>;
     let detectTimer: ReturnType<typeof setInterval>;
     let cancelled = false;
-    navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
+    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
       .then((stream) => {
         if (cancelled) {
           // Component already unmounted before permission resolved — stop immediately.
@@ -92,7 +92,7 @@ function WebcamMonitor({ resultId, violCount, onCamDenied, onViolation }:
         const loadModel = async () => {
           for (let i = 0; i < 20 && !(window.cocoSsd); i++) await new Promise(r => setTimeout(r, 500));
           if (!window.cocoSsd || cancelled) return;
-          try { model = await window.cocoSsd.load({ base: "lite_mobilenet_v2" }); } catch { /* detection stays disabled if the model can't load */ }
+          try { model = await window.cocoSsd.load({ base: "mobilenet_v2" }); } catch { /* detection stays disabled if the model can't load */ }
         };
         loadModel();
 
@@ -102,7 +102,7 @@ function WebcamMonitor({ resultId, violCount, onCamDenied, onViolation }:
           try { predictions = await model.detect(videoRef.current); } catch { return; }
 
           const persons = predictions.filter(p => p.class === "person" && p.score > 0.55);
-          const phone = predictions.find(p => p.class === "cell phone" && p.score > 0.5);
+          const phone = predictions.find(p => p.class === "cell phone" && p.score > 0.35);
           const now = Date.now();
 
           if (persons.length === 0) {
@@ -627,12 +627,6 @@ export default function AssessmentAttempt() {
               </span>
             )}
             <Timer durationMinutes={attempt.duration} startedAt={attempt.startedAt} onExpire={handleSubmit} />
-            <button disabled={currentIndex === 0} onClick={() => setCurrentIndex(i => Math.max(0, i-1))}
-              className="px-3 py-2 bg-gray-100 rounded-lg text-sm disabled:opacity-40">Previous</button>
-            {currentIndex < attempt.questions.length-1 ? (
-              <button onClick={() => setCurrentIndex(i => Math.min(attempt.questions.length-1, i+1))}
-                className="px-3 py-2 bg-primary text-white rounded-lg text-sm">Next</button>
-            ) : null}
             <button onClick={handleSubmit} disabled={submitting}
               className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">
               {submitting ? "Submitting…" : "Submit"}
@@ -688,8 +682,16 @@ export default function AssessmentAttempt() {
               </div>
             )}
           </div>
-          <QuestionNavigator totalQuestions={attempt.questions.length} currentIndex={currentIndex}
-            answeredIndexes={answeredIndexes} onNavigate={setCurrentIndex} />
+          <div>
+            <div className="flex gap-2 mb-3">
+              <button disabled={currentIndex === 0} onClick={() => setCurrentIndex(i => Math.max(0, i-1))}
+                className="flex-1 px-3 py-2 bg-gray-100 rounded-lg text-sm disabled:opacity-40">Previous</button>
+              <button disabled={currentIndex === attempt.questions.length-1} onClick={() => setCurrentIndex(i => Math.min(attempt.questions.length-1, i+1))}
+                className="flex-1 px-3 py-2 bg-primary text-white rounded-lg text-sm disabled:opacity-40">Next</button>
+            </div>
+            <QuestionNavigator totalQuestions={attempt.questions.length} currentIndex={currentIndex}
+              answeredIndexes={answeredIndexes} onNavigate={setCurrentIndex} />
+          </div>
         </div>
       </div>
     </>
