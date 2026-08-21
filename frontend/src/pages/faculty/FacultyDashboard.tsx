@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
+import { getMyBatches, getBatchStudents } from "../../api/facultyApi";
 import ArcLoader from "../../components/ArcLoader";
-import { getMyBatches, getBatchStudents, createBatch } from "../../api/facultyApi";
 import { FacultyBatch, StudentInBatch } from "../../types";
 
 export default function FacultyDashboard() {
@@ -8,9 +8,6 @@ export default function FacultyDashboard() {
   const [selectedBatch, setSelectedBatch] = useState<FacultyBatch | null>(null);
   const [students, setStudents] = useState<StudentInBatch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [newBatchName, setNewBatchName] = useState("");
-  const [newBatchCourse, setNewBatchCourse] = useState("");
 
   useEffect(() => {
     loadBatches();
@@ -29,53 +26,16 @@ export default function FacultyDashboard() {
     setStudents(s);
   };
 
-  const handleCreateBatch = async () => {
-    if (!newBatchName.trim()) return;
-    await createBatch({ name: newBatchName, course: newBatchCourse });
-    setNewBatchName("");
-    setNewBatchCourse("");
-    setShowCreate(false);
-    loadBatches();
-  };
+  const fmtDate = (d?: string) => (d ? new Date(d).toLocaleDateString() : "—");
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-800">Faculty Dashboard</h1>
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
-        >
-          + New FacultyBatch
-        </button>
+        <p className="text-sm text-slate-400 mt-1">
+          Batches are created and assigned by Admin. Contact Admin to get a new batch assigned to you.
+        </p>
       </div>
-
-      {showCreate && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="text-xs text-slate-500">FacultyBatch Name</label>
-            <input
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-              value={newBatchName}
-              onChange={(e) => setNewBatchName(e.target.value)}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="text-xs text-slate-500">Course</label>
-            <input
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-              value={newBatchCourse}
-              onChange={(e) => setNewBatchCourse(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={handleCreateBatch}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700"
-          >
-            Create
-          </button>
-        </div>
-      )}
 
       {loading ? (
         <ArcLoader label="Loading batches" />
@@ -92,6 +52,9 @@ export default function FacultyDashboard() {
               <h3 className="font-semibold text-slate-800">{batch.name}</h3>
               <p className="text-sm text-slate-500">{batch.course || "—"}</p>
               <p className="text-xs text-slate-400 mt-2">{batch.studentCount} students</p>
+              <p className="text-xs text-slate-400 mt-1">
+                {fmtDate(batch.startDate)} → {fmtDate(batch.endDate)}
+              </p>
             </button>
           ))}
           {batches.length === 0 && (
@@ -102,9 +65,14 @@ export default function FacultyDashboard() {
 
       {selectedBatch && (
         <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <h2 className="font-semibold text-slate-800 mb-3">
-            Students in {selectedBatch.name}
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-slate-800">
+              Students in {selectedBatch.name}
+            </h2>
+            <span className="text-xs text-slate-400">
+              {fmtDate(selectedBatch.startDate)} → {fmtDate(selectedBatch.endDate)}
+            </span>
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-100">
