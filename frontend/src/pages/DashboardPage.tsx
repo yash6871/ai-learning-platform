@@ -1,6 +1,6 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../services/api";
 import StudentDashboard from "./student/StudentDashboard";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -14,55 +14,19 @@ const ROLE_LABELS: Record<string, string> = {
   guest: "Guest",
 };
 
-interface QuickLink {
-  to: string;
-  label: string;
-  description: string;
+interface BatchProgressRow {
+  batchId: string;
+  batchName: string;
+  studentsCount: number;
+  averageScore: number | null;
+  completionRate: number;
 }
 
-const QUICK_LINKS: Record<string, QuickLink[]> = {
-  student: [
-    { to: "/student/learning", label: "Continue Learning", description: "Pick up your syllabus where you left off" },
-    { to: "/student/coding-lab", label: "Coding Lab", description: "Practice problems and run test cases" },
-    { to: "/student/assessments/history", label: "Assessment History", description: "See scores, rank and percentile" },
-    { to: "/student/mock-interview", label: "Mock Interview", description: "Practice with AI-scored interviews" },
-    { to: "/student/jobs/recommended", label: "Recommended Jobs", description: "Roles matched to your profile" },
-    { to: "/chatbot", label: "AI Career Assistant", description: "Ask questions, get guidance anytime" },
-  ],
-  faculty: [
-    { to: "/faculty/dashboard", label: "Faculty Dashboard", description: "Your batches and students" },
-    { to: "/faculty/assessments", label: "My Assessments", description: "View, monitor and manage assessments" },
-    { to: "/faculty/assessments/new", label: "Create Assessment", description: "Generate questions with AI" },
-    { to: "/faculty/attendance", label: "Attendance", description: "Record today's session attendance" },
-    { to: "/faculty/evaluate", label: "Evaluate Assignments", description: "Review submissions and give feedback" },
-    { to: "/faculty/performance", label: "Student Performance", description: "Leaderboards and weak-area insights" },
-    { to: "/faculty/mock-interviews", label: "Schedule Mock Interview", description: "Set up practice interviews" },
-  ],
-  hr: [
-    { to: "/hr/jobs", label: "Post a Job", description: "Publish a role with requirements" },
-    { to: "/hr/candidate-match", label: "Candidate Matching", description: "AI-ranked candidates for a role" },
-    { to: "/hr/companies", label: "Companies", description: "Manage hiring partners" },
-    { to: "/hr/offers", label: "Offers", description: "Track offers through to acceptance" },
-    { to: "/hr/analytics", label: "Placement Analytics", description: "Hiring outcomes and statistics" },
-    { to: "/interview/schedule", label: "Schedule Interview", description: "Book an interview slot" },
-  ],
-  admin: [
-    { to: "/admin/user-management", label: "Manage Users", description: "Create staff accounts and set roles" },
-    { to: "/admin/courses-batches", label: "Courses & Batches", description: "Manage the academic structure" },
-    { to: "/admin/payments", label: "Payments", description: "Fee records and payment status" },
-    { to: "/admin/audit-log", label: "Audit Log", description: "Review important platform actions" },
-    { to: "/faculty/assessments", label: "Assessment Monitor", description: "Live exam monitoring and snapshots" },
-    { to: "/admin/ai-usage", label: "AI Usage", description: "Monitor AI cost and usage" },
-    { to: "/admin/settings", label: "Platform Settings", description: "Configure the platform" },
-  ],
-};
-
-function quickLinksFor(role: string): QuickLink[] {
-  if (role === "student") return QUICK_LINKS.student;
-  if (role === "faculty" || role === "trainer") return QUICK_LINKS.faculty;
-  if (role === "hr" || role === "placement_coordinator") return QUICK_LINKS.hr;
-  if (role === "admin" || role === "super_admin") return QUICK_LINKS.admin;
-  return [];
+interface DashboardSummary {
+  totalBatches: number;
+  totalStudents: number;
+  overallAverageScore: number | null;
+  batches: BatchProgressRow[];
 }
 
 const StatCard: React.FC<{ label: string; value: React.ReactNode; hint: string; accent: string }> = ({
@@ -84,7 +48,18 @@ const StatCard: React.FC<{ label: string; value: React.ReactNode; hint: string; 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const roleLabel = user ? ROLE_LABELS[user.role] : "";
-  const links = user ? quickLinksFor(user.role) : [];
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+
+  const canSeeBatches = user && ["faculty", "trainer", "admin", "super_admin"].includes(user.role);
+
+  useEffect(() => {
+    if (canSeeBatches) {
+      api.get<DashboardSummary>("/api/v1/analytics/dashboard-summary")
+        .then((r) => setSummary(r.data))
+        .catch(() => { /* section just stays empty if this fails */ });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role]);
 
   if (user?.role === "student") {
     return <StudentDashboard />;
@@ -108,23 +83,43 @@ export const DashboardPage: React.FC = () => {
         />
       </div>
 
-      {links.length > 0 && (
+      {summary && (
         <div className="mt-8">
-          <h2 className="font-display text-lg font-bold text-ink-900 dark:text-white">Quick links</h2>
-          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {links.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
-              >
-                <p className="font-display text-sm font-bold text-ink-900 group-hover:text-brand-700 dark:text-white dark:group-hover:text-brand-300">
-                  {link.label}
-                </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{link.description}</p>
-              </Link>
-            ))}
+          <h2 className="font-display text-lg font-bold text-ink-900 dark:text-white">
+            {user?.role === "admin" || user?.role === "super_admin" ? "Overall Analytics" : "My Batches"}
+          </h2>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard label="Batches" value={summary.totalBatches} hint="Currently assigned" accent="bg-brand-500" />
+            <StatCard label="Students" value={summary.totalStudents} hint="Across all batches" accent="bg-emerald-500" />
+            <StatCard
+              label="Average Score"
+              value={summary.overallAverageScore !== null ? `${summary.overallAverageScore}%` : "—"}
+              hint="Across completed assessments"
+              accent="bg-indigo-500"
+            />
           </div>
+
+          {summary.batches.length > 0 && (
+            <div className="mt-5 space-y-3">
+              {summary.batches.map((b) => (
+                <div key={b.batchId} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-display text-sm font-bold text-ink-900 dark:text-white">{b.batchName}</p>
+                    <p className="text-xs text-slate-400">
+                      {b.studentsCount} students · {b.averageScore !== null ? `${b.averageScore}% avg` : "no scores yet"}
+                    </p>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div
+                      className="h-full bg-brand-500 rounded-full transition-all"
+                      style={{ width: `${b.completionRate}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">{b.completionRate}% of students completed at least one assessment</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </>

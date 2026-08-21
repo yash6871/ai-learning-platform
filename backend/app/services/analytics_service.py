@@ -8,7 +8,48 @@ class AnalyticsService:
         self.db = db
         self.repo = AnalyticsRepo(db)
 
-    def student_analytics(self, user_id):
+    def dashboard_summary(self, requester_id, is_admin: bool = False) -> dict:
+        """Overview cards + per-batch progress bars for the non-student
+        dashboard landing page. Admin sees every batch; faculty/trainer see
+        only batches they're assigned to (faculty_id or trainer_id)."""
+        from app.models.course import Batch, BatchStudent
+        from app.models.assessment import Result
+
+        query = self.db.query(Batch)
+        if not is_admin:
+            query = query.filter((Batch.faculty_id == requester_id) | (Batch.trainer_id == requester_id))
+        batches = query.all()
+
+        batch_rows = []
+        all_scores = []
+        total_students = 0
+        for b in batches:
+            student_ids = [
+                row.user_id for row in self.db.query(BatchStudent).filter(BatchStudent.batch_id == b.id).all()
+            ]
+            total_students += len(student_ids)
+            results = (
+                self.db.query(Result).filter(Result.user_id.in_(student_ids)).all()
+                if student_ids else []
+            )
+            scores = [r.score for r in results if r.score is not None]
+            all_scores.extend(scores)
+            completed = len({r.user_id for r in results if r.status == "completed"})
+            completion_rate = round((completed / len(student_ids) * 100), 1) if student_ids else 0.0
+            batch_rows.append({
+                "batchId": str(b.id),
+                "batchName": b.name,
+                "studentsCount": len(student_ids),
+                "averageScore": round(sum(scores) / len(scores), 1) if scores else None,
+                "completionRate": completion_rate,
+            })
+
+        return {
+            "totalBatches": len(batches),
+            "totalStudents": total_students,
+            "overallAverageScore": round(sum(all_scores) / len(all_scores), 1) if all_scores else None,
+            "batches": batch_rows,
+        }
         results = self.repo.student_results(user_id)
         submissions = self.repo.student_coding_submissions(user_id)
         scores = [r.score for r in results if r.score is not None]

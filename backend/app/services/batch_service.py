@@ -56,6 +56,35 @@ class BatchService:
         users = self.db.query(User).filter(User.id.in_(student_ids)).all()
         return [StudentInBatch(id=u.id, name=u.name, email=u.email) for u in users]
 
+    def assignments_progress(self, batch_id: UUID) -> dict:
+        """Every assignment on the platform, with completion counted against
+        THIS batch's roster specifically (assignments aren't batch-scoped in
+        the schema, so 'completed by this batch' is computed by
+        cross-referencing submissions against this batch's student list)."""
+        from app.models.student_extras import Assignment, AssignmentSubmission
+
+        student_ids = self.repo.list_students(batch_id)
+        assignments = self.db.query(Assignment).order_by(Assignment.due_date.desc().nullslast()).all()
+
+        rows = []
+        for a in assignments:
+            submitted_user_ids = set()
+            if student_ids:
+                subs = self.db.query(AssignmentSubmission).filter(
+                    AssignmentSubmission.assignment_id == a.id,
+                    AssignmentSubmission.user_id.in_(student_ids),
+                ).all()
+                submitted_user_ids = {s.user_id for s in subs}
+            rows.append({
+                "assignmentId": str(a.id),
+                "title": a.title,
+                "dueDate": a.due_date,
+                "maxMarks": a.max_marks,
+                "totalStudents": len(student_ids),
+                "submittedCount": len(submitted_user_ids),
+            })
+        return {"batchId": str(batch_id), "assignments": rows}
+
     def _to_out(self, batch) -> BatchOut:
         course_name = batch.course.name if batch.course else None
         return BatchOut(

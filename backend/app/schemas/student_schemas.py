@@ -56,6 +56,13 @@ class StudentProfileOut(CamelModel):
     github_url: Optional[str] = None
     linkedin_url: Optional[str] = None
     avatar_url: Optional[str] = None
+    # Enrollment context — course/batch/faculty and rollup stats, populated
+    # in StudentService.get_profile() (not stored on this table directly).
+    course_name: Optional[str] = None
+    batch_name: Optional[str] = None
+    faculty_name: Optional[str] = None
+    course_progress: Optional[float] = None
+    average_percentile: Optional[float] = None
 
 
 class StudentProfileUpdate(CamelModel):
@@ -160,11 +167,6 @@ class AssessmentListItem(CamelModel):
     status: str  # upcoming | in_progress | completed
 
 
-class SampleTestCaseOut(CamelModel):
-    input: Optional[str] = None
-    expected_output: Optional[str] = None
-
-
 class QuestionForAttempt(CamelModel):
     id: UUID
     question_text: str
@@ -173,10 +175,6 @@ class QuestionForAttempt(CamelModel):
     # this payload goes straight to the student's browser.
     options: Optional[List[str]] = None
     marks: float
-    # Coding questions only: the non-hidden test cases, so the student knows
-    # the exact input/output contract before writing code (hidden test cases
-    # are still withheld — only used at run-time result comparison).
-    sample_test_cases: Optional[List[SampleTestCaseOut]] = None
 
 
 class AssessmentAttemptOut(CamelModel):
@@ -186,7 +184,6 @@ class AssessmentAttemptOut(CamelModel):
     duration: int
     started_at: datetime
     questions: List[QuestionForAttempt]
-    max_violations: int = 10
 
 
 class AnswerSubmit(CamelModel):
@@ -227,7 +224,6 @@ class AssessmentHistoryItem(CamelModel):
     assessment_title: str
     type: str
     score: float
-    max_score: Optional[float] = None
     status: str
     percentile: Optional[float] = None
     rank: Optional[int] = None

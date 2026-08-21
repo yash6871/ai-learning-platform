@@ -18,6 +18,18 @@ export const addStudentsToBatch = (batchId: string, studentIds: string[]) =>
 export const getBatchStudents = (batchId: string) =>
   apiClient.get<StudentInBatch[]>(`/faculty/batches/${batchId}/students`).then((r) => r.data);
 
+export interface BatchAssignmentProgress {
+  assignmentId: string;
+  title: string;
+  dueDate: string | null;
+  maxMarks: number;
+  totalStudents: number;
+  submittedCount: number;
+}
+
+export const getBatchAssignmentsProgress = (batchId: string) =>
+  apiClient.get<{ batchId: string; assignments: BatchAssignmentProgress[] }>(`/faculty/batches/${batchId}/assignments-progress`).then((r) => r.data.assignments);
+
 // ---------- Attendance ----------
 export const markAttendance = (batchId: string, date: string, entries: AttendanceEntry[]) =>
   apiClient
@@ -52,15 +64,11 @@ export const generateQuestionsWithAI = (payload: {
 // ---------- Assessments ----------
 export const createAssessment = (payload: {
   title: string; description?: string; type: string; questionIds: string[];
-  duration: number; batchIds?: string[]; maxViolations?: number;
+  duration: number; batchIds?: string[];
 }) => apiClient.post<Assessment>("/assessments", payload).then((r) => r.data);
 
 export const getMyAssessments = () =>
   apiClient.get<Assessment[]>("/assessments").then((r) => r.data);
-
-// Admin/Super Admin: every assessment across all faculty, not just "mine".
-export const getAllAssessments = () =>
-  apiClient.get<Assessment[]>("/assessments/all").then((r) => r.data);
 
 // ---------- Performance ----------
 export const getBatchAnalytics = (batchId: string) =>

@@ -62,6 +62,27 @@ export default function Profile() {
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
 
+      {(profile.courseName || profile.facultyName || profile.batchName) && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <p className="text-[11px] text-gray-400 uppercase font-semibold">Course</p>
+            <p className="text-sm font-semibold text-gray-800 mt-1">{profile.courseName || "—"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-gray-400 uppercase font-semibold">Faculty</p>
+            <p className="text-sm font-semibold text-gray-800 mt-1">{profile.facultyName || "—"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-gray-400 uppercase font-semibold">Course Progress</p>
+            <p className="text-sm font-semibold text-gray-800 mt-1">{profile.courseProgress != null ? `${profile.courseProgress}%` : "—"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-gray-400 uppercase font-semibold">Avg. Percentile</p>
+            <p className="text-sm font-semibold text-gray-800 mt-1">{profile.averagePercentile != null ? `${profile.averagePercentile}%` : "—"}</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         <Field label="Bio">
           <textarea className="input" value={profile.bio ?? ""}
