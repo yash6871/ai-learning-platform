@@ -128,6 +128,8 @@ def live_monitor(
             "startedAt": r.started_at,
             "violationCount": r.violation_count,
             "isFlagged": bool(r.is_flagged),
+            "lastViolationReason": getattr(r, "last_violation_reason", None),
+            "lastViolationSeverity": getattr(r, "last_violation_severity", None),
             "isTerminated": bool(getattr(r, "is_terminated", False)),
             "status": r.status,
             "helpRequested": bool(getattr(r, "help_requested", False)),

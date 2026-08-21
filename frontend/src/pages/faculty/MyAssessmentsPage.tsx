@@ -14,6 +14,8 @@ interface LiveStudent {
   startedAt: string;
   violationCount: number;
   isFlagged: boolean;
+  lastViolationReason?: string | null;
+  lastViolationSeverity?: "low" | "high" | null;
   latestSnapshot: string | null;
 }
 
@@ -282,6 +284,7 @@ export default function MyAssessmentsPage() {
                 <div key={s.studentId}
                   className={`rounded-xl border p-4 ${
                     (s as any).isTerminated ? "border-red-400 bg-red-50" :
+                    s.lastViolationSeverity === "high" ? "border-red-400 bg-red-50 ring-2 ring-red-300" :
                     s.isFlagged ? "border-amber-300 bg-amber-50" : "border-gray-200"
                   }`}>
                   <div className="flex items-start gap-4">
@@ -295,7 +298,10 @@ export default function MyAssessmentsPage() {
                         {(s as any).isTerminated && (
                           <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">🚫 TERMINATED</span>
                         )}
-                        {s.isFlagged && !(s as any).isTerminated && (
+                        {s.lastViolationSeverity === "high" && !(s as any).isTerminated && (
+                          <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">🔴 HIGH SEVERITY</span>
+                        )}
+                        {s.isFlagged && !(s as any).isTerminated && s.lastViolationSeverity !== "high" && (
                           <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">🚨 FLAGGED</span>
                         )}
                         {(s as any).helpRequested && (
@@ -318,6 +324,13 @@ export default function MyAssessmentsPage() {
                       <p className="text-xs text-gray-400 mt-0.5 font-mono">
                         {s.studentEmail || "no email"} · IP: {s.ipAddress || "unknown"}
                       </p>
+                      {s.lastViolationReason && (
+                        <div className={`mt-2 rounded p-2 text-xs font-medium ${
+                          s.lastViolationSeverity === "high" ? "bg-red-100 text-red-800 border border-red-300" : "bg-slate-50 text-slate-600 border border-slate-200"
+                        }`}>
+                          {s.lastViolationSeverity === "high" ? "🔴" : "⚠️"} {s.lastViolationReason}
+                        </div>
+                      )}
                       {(s as any).helpMessage && (
                         <div className="mt-2 bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800">
                           <span className="font-bold">Help message:</span> {(s as any).helpMessage}

@@ -7,7 +7,6 @@ import QuestionNavigator from "../../components/QuestionNavigator";
 import ArcLoader from "../../components/ArcLoader";
 import type { AssessmentAttempt as AttemptType, AnswerSubmit, AssessmentResult } from "../../types";
 
-const MAX_VIOLATIONS = 3;
 const SNAPSHOT_INTERVAL_MS = 37_000; // 37s - staggered to reduce CPU spikes
 const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const BASE = `${API_ROOT}/api/v1/student/assessments`;
@@ -50,7 +49,7 @@ declare global {
 }
 
 function WebcamMonitor({ resultId, violCount, onCamDenied, onViolation }:
-  { resultId: string; violCount: number; onCamDenied: () => void; onViolation: (msg: string) => void }) {
+  { resultId: string; violCount: number; onCamDenied: () => void; onViolation: (msg: string, severity?: "low" | "high") => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const onViolationRef = useRef(onViolation);
@@ -109,7 +108,7 @@ function WebcamMonitor({ resultId, violCount, onCamDenied, onViolation }:
           if (persons.length === 0) {
             if (noPersonSinceMs === null) noPersonSinceMs = now;
             else if (now - noPersonSinceMs >= ABSENCE_LIMIT_MS) {
-              onViolationRef.current("No one detected in the camera frame for over 30 seconds.");
+              onViolationRef.current("No one detected in the camera frame for over 30 seconds.", "high");
               noPersonSinceMs = null; // reset window so it doesn't refire every tick
             }
           } else {
@@ -121,7 +120,7 @@ function WebcamMonitor({ resultId, violCount, onCamDenied, onViolation }:
             // require 2 consecutive detections (~12s apart) to avoid a
             // one-frame false positive (e.g. someone briefly walking by)
             if (multiPersonStreak >= 2) {
-              onViolationRef.current("Multiple people detected in the camera frame.");
+              onViolationRef.current("Multiple people detected in the camera frame.", "high");
               multiPersonStreak = 0;
             }
           } else {
@@ -130,7 +129,7 @@ function WebcamMonitor({ resultId, violCount, onCamDenied, onViolation }:
 
           if (phone && now - phoneAlreadyFlaggedAt > 20_000) {
             phoneAlreadyFlaggedAt = now;
-            onViolationRef.current("A mobile phone was detected in the camera frame.");
+            onViolationRef.current("A mobile phone was detected in the camera frame.", "high");
           }
         };
         detectTimer = setInterval(runDetection, 6_000);
@@ -407,18 +406,26 @@ export default function AssessmentAttempt() {
     setBeginning(false);
   };
 
-  const flagViolation = useCallback((msg: string) => {
+  const flagViolation = useCallback((msg: string, severity: "low" | "high" = "low") => {
     if (submittedRef.current || terminated) return;
     violationsRef.current += 1;
     setViolations(violationsRef.current);
     setLocked(true);
-    if (violationsRef.current >= MAX_VIOLATIONS) {
+    const maxViol = attempt?.maxViolations ?? 10;
+    if (attempt) {
+      fetch(`${BASE}/report-violation`, {
+        method: "POST",
+        headers: { ...authHeader(), "Content-Type": "application/json" },
+        body: JSON.stringify({ result_id: attempt.resultId, violation_count: violationsRef.current, reason: msg, severity }),
+      }).catch(() => {});
+    }
+    if (violationsRef.current >= maxViol) {
       setWarning("Too many violations — your test has been terminated.");
       handleTerminate();
     } else {
-      setWarning(`${msg} Violation ${violationsRef.current}/${MAX_VIOLATIONS}. At ${MAX_VIOLATIONS} your test is terminated.`);
+      setWarning(`${msg} Violation ${violationsRef.current}/${maxViol}. At ${maxViol} your test is terminated.`);
     }
-  }, [terminated, handleTerminate]);
+  }, [terminated, handleTerminate, attempt]);
 
   // ── Lockdown listeners ────────────────────────────────────────────────────
   useEffect(() => {
@@ -493,7 +500,7 @@ export default function AssessmentAttempt() {
             You <strong>cannot</strong> resume or restart this attempt.
           </p>
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
-            Violation count reached {MAX_VIOLATIONS}/{MAX_VIOLATIONS}. This event has been logged and flagged for review.
+            Violation count reached {attempt?.maxViolations ?? 10}/{attempt?.maxViolations ?? 10}. This event has been logged and flagged for review.
           </div>
 
           {!helpSent ? (
@@ -542,7 +549,7 @@ export default function AssessmentAttempt() {
           <ul className="list-disc pl-5 space-y-1">
             <li>This test runs in fullscreen and your webcam is recorded.</li>
             <li>Tab switching, window blur, or fullscreen exit = <strong>violation</strong>.</li>
-            <li>After <strong>{MAX_VIOLATIONS} violations</strong> your test is <strong>permanently terminated</strong>.</li>
+            <li>After <strong>{attempt?.maxViolations ?? 10} violations</strong> your test is <strong>permanently terminated</strong>.</li>
             <li>Terminated attempts <strong>cannot be restarted</strong> — even on page reload.</li>
             <li>Copy, paste, right-click and DevTools are blocked.</li>
           </ul>
@@ -587,17 +594,17 @@ export default function AssessmentAttempt() {
       {locked && (
         <div className="fixed inset-0 z-50 bg-slate-950/98 flex items-center justify-center p-6">
           <div className="max-w-md text-center space-y-4">
-            <p className="text-5xl">{violations >= MAX_VIOLATIONS ? "🚫" : "🔒"}</p>
+            <p className="text-5xl">{violations >= (attempt?.maxViolations ?? 10) ? "🚫" : "🔒"}</p>
             <h2 className="text-xl font-black text-white">
-              {violations >= MAX_VIOLATIONS ? "Test Terminated" : "Test Paused"}
+              {violations >= (attempt?.maxViolations ?? 10) ? "Test Terminated" : "Test Paused"}
             </h2>
             <p className="text-sm text-slate-300">{warning}</p>
             <div className={`text-xs px-3 py-1.5 rounded-full inline-block font-bold ${
-              violations >= MAX_VIOLATIONS ? "bg-red-800 text-red-200" : "bg-amber-800 text-amber-200"
+              violations >= (attempt?.maxViolations ?? 10) ? "bg-red-800 text-red-200" : "bg-amber-800 text-amber-200"
             }`}>
-              Violation {violations}/{MAX_VIOLATIONS}
+              Violation {violations}/{attempt?.maxViolations ?? 10}
             </div>
-            {violations < MAX_VIOLATIONS && (
+            {violations < (attempt?.maxViolations ?? 10) && (
               <button onClick={async () => { try { await enterFullscreen(); } catch {} setLocked(false); }}
                 className="block w-full px-5 py-3 bg-primary text-white rounded-xl text-sm font-semibold">
                 Return to fullscreen to resume

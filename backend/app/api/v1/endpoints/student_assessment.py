@@ -59,6 +59,79 @@ def get_history(current_user: CurrentUser = Depends(require_student), db: Sessio
     return StudentService(db).get_assessment_history(current_user.id)
 
 
+@router.get("/history/batches")
+def get_history_batches(current_user: CurrentUser = Depends(require_student), db: Session = Depends(get_db)):
+    """Batches the student is enrolled in — used by the Assessment History
+    dashboard to show which batch(es) their results belong to."""
+    return StudentService(db).get_batch_summary(current_user.id)
+
+
+class ViolationReport(BaseModel):
+    result_id: str
+    violation_count: int
+    reason: str
+    severity: str = "low"  # "low" (tab switch, fullscreen exit) | "high" (phone / multiple people)
+
+
+@router.post("/report-violation", status_code=204)
+def report_violation(
+    payload: ViolationReport,
+    current_user: CurrentUser = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """Fired the instant a violation happens client-side, instead of only
+    piggybacking on the ~37s periodic snapshot upload — a phone or a second
+    person in frame is worth flagging to faculty immediately, not up to 37s
+    later."""
+    result = db.query(Result).filter(Result.id == payload.result_id, Result.user_id == current_user.id).first()
+    if not result:
+        return
+    result.violation_count = max(result.violation_count, payload.violation_count)
+    result.last_violation_reason = payload.reason[:200]
+    result.last_violation_severity = payload.severity
+    if payload.severity == "high":
+        result.is_flagged = True
+    db.commit()
+
+    if payload.severity == "high":
+        from app.models.assessment import Assessment
+        from app.models.admin_platform import Notification, NotificationRecipient
+        from app.models.course import BatchFaculty, BatchStudent
+
+        assessment = db.query(Assessment).filter(Assessment.id == result.assessment_id).first()
+        if assessment:
+            # Notify whoever created the assessment, plus any faculty
+            # assigned to a batch this student is enrolled in — covers the
+            # case where a faculty teaches multiple batches and one of
+            # their OTHER faculty colleagues created this particular
+            # assessment but the student is in a batch this faculty
+            # monitors too.
+            recipient_ids = {assessment.created_by}
+            student_batch_ids = [
+                row.batch_id for row in db.query(BatchStudent).filter(BatchStudent.user_id == current_user.id).all()
+            ]
+            if student_batch_ids:
+                recipient_ids.update(
+                    row.user_id for row in db.query(BatchFaculty).filter(BatchFaculty.batch_id.in_(student_batch_ids)).all()
+                )
+
+            notif = Notification(
+                title="⚠️ Proctoring alert — high severity",
+                message=f"{current_user.name if hasattr(current_user, 'name') else 'A student'} — {payload.reason} (Assessment: {assessment.title})",
+                type="assessment",
+                channel="in_app",
+                created_by=None,
+                target_roles=[],
+                target_users=[str(uid) for uid in recipient_ids],
+                status="sent",
+            )
+            db.add(notif)
+            db.flush()
+            for uid in recipient_ids:
+                db.add(NotificationRecipient(notification_id=notif.id, user_id=uid))
+            db.commit()
+
+
 SNAPSHOT_DIR = os.environ.get("SNAPSHOT_DIR", "snapshots")
 
 

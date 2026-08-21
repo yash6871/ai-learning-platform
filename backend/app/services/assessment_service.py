@@ -17,6 +17,7 @@ class AssessmentService:
             question_ids=payload.questionIds, duration=payload.duration, created_by=created_by,
             batch_ids=payload.batchIds,
             active_from=payload.activeFrom, active_until=payload.activeUntil,
+            max_violations=payload.maxViolations,
         )
         return self._to_out(assessment)
 
@@ -39,5 +40,5 @@ class AssessmentService:
             questionIds=[UUID(q) if isinstance(q, str) else q for q in qids],
             batchIds=[UUID(b) if isinstance(b, str) else b for b in bids] or None,
             duration=a.duration, createdBy=a.created_by, createdAt=a.created_at,
-            questionCount=len(qids),
+            questionCount=len(qids), maxViolations=getattr(a, "max_violations", None) or 10,
         )

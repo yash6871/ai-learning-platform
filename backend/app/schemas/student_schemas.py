@@ -186,6 +186,7 @@ class AssessmentAttemptOut(CamelModel):
     duration: int
     started_at: datetime
     questions: List[QuestionForAttempt]
+    max_violations: int = 10
 
 
 class AnswerSubmit(CamelModel):
@@ -226,6 +227,7 @@ class AssessmentHistoryItem(CamelModel):
     assessment_title: str
     type: str
     score: float
+    max_score: Optional[float] = None
     status: str
     percentile: Optional[float] = None
     rank: Optional[int] = None

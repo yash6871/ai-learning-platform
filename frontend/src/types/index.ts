@@ -214,6 +214,7 @@ export interface AssessmentAttempt {
   duration: number;
   startedAt: string;
   questions: QuestionForAttempt[];
+  maxViolations?: number;
 }
 
 export interface AnswerSubmit {
@@ -239,6 +240,7 @@ export interface AssessmentHistoryItem {
   assessmentTitle: string;
   type: string;
   score: number;
+  maxScore?: number;
   status: string;
   percentile?: number;
   rank?: number;
@@ -364,6 +366,7 @@ export interface Assessment {
   createdAt: string;
   questionCount: number;
   batchIds?: string[];
+  maxViolations?: number;
 }
 
 export interface StudentPerformanceRow {

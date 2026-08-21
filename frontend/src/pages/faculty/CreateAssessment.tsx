@@ -10,6 +10,7 @@ export default function CreateAssessmentPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(30);
+  const [maxViolations, setMaxViolations] = useState(10);
   const [batchIds, setBatchIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -49,7 +50,7 @@ export default function CreateAssessmentPage() {
     try {
       await createAssessment({
         title, description, type: assessmentType, questionIds: [...selected],
-        duration, batchIds: [...batchIds],
+        duration, batchIds: [...batchIds], maxViolations,
       });
       setMessage("Assessment created successfully. Redirecting...");
       setTitle(""); setDescription(""); setSelected(new Set()); setBatchIds(new Set());
@@ -85,6 +86,14 @@ export default function CreateAssessmentPage() {
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-24"
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
+          />
+          <label className="text-xs text-slate-500">Terminate after (violations)</label>
+          <input
+            type="number"
+            min={1}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-20"
+            value={maxViolations}
+            onChange={(e) => setMaxViolations(Math.max(1, Number(e.target.value)))}
           />
         </div>
         <div>

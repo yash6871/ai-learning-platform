@@ -46,6 +46,7 @@ class Assessment(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     active_from = Column(DateTime(timezone=True), nullable=True)
     active_until = Column(DateTime(timezone=True), nullable=True)
+    max_violations = Column(Integer, nullable=False, default=10)  # terminate after this many proctoring violations
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def is_currently_active(self) -> bool:
@@ -74,6 +75,8 @@ class Result(Base):
     is_flagged = Column(Boolean, nullable=False, default=False)
     is_terminated = Column(Boolean, nullable=False, default=False)
     termination_reason = Column(String(200), nullable=True)
+    last_violation_reason = Column(String(200), nullable=True)  # English description of the most recent violation
+    last_violation_severity = Column(String(20), nullable=True)  # "low" (tab switch) | "high" (phone / multiple people)
     help_requested = Column(Boolean, nullable=False, default=False)
     help_message = Column(Text, nullable=True)
     ip_address = Column(String(64), nullable=True)

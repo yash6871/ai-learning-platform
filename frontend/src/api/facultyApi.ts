@@ -52,7 +52,7 @@ export const generateQuestionsWithAI = (payload: {
 // ---------- Assessments ----------
 export const createAssessment = (payload: {
   title: string; description?: string; type: string; questionIds: string[];
-  duration: number; batchIds?: string[];
+  duration: number; batchIds?: string[]; maxViolations?: number;
 }) => apiClient.post<Assessment>("/assessments", payload).then((r) => r.data);
 
 export const getMyAssessments = () =>

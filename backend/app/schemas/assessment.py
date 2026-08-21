@@ -14,6 +14,7 @@ class AssessmentCreate(BaseModel):
     batchIds: Optional[List[UUID]] = None
     activeFrom: Optional[datetime] = None
     activeUntil: Optional[datetime] = None
+    maxViolations: int = 10  # terminate the attempt after this many proctoring violations
 
 
 class AssessmentOut(BaseModel):
@@ -32,3 +33,4 @@ class AssessmentOut(BaseModel):
     isActive: bool = True
     activeFrom: Optional[datetime] = None
     activeUntil: Optional[datetime] = None
+    maxViolations: int = 10
