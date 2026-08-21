@@ -13,4 +13,10 @@ export const adminApi = {
 
   signInLogs: (params: { skip?: number; limit?: number; user_id?: string }) =>
     api.get<{ total: number; items: SignInLogItem[] }>("/api/v1/admin/sign-in-logs", { params }),
+
+  listBatches: () =>
+    api.get<{ id: string; name: string }[]>("/api/v1/registration/batches"),
+
+  enrollInBatch: (batchId: string, userId: string) =>
+    api.post(`/api/v1/admin/batches/${batchId}/enroll/${userId}`),
 };

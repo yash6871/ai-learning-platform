@@ -12,6 +12,9 @@ export const ManageUsersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [batches, setBatches] = useState<{ id: string; name: string }[]>([]);
+  const [assigning, setAssigning] = useState<string | null>(null); // userId currently being assigned
+  const [selectedBatch, setSelectedBatch] = useState<Record<string, string>>({}); // userId -> batchId
 
   const loadUsers = async () => {
     setLoading(true);
@@ -27,6 +30,7 @@ export const ManageUsersPage: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
+    adminApi.listBatches().then(({ data }) => setBatches(data)).catch(() => { /* dropdown just stays empty */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -49,6 +53,22 @@ export const ManageUsersPage: React.FC = () => {
       loadUsers();
     } catch (err) {
       setError(extractErrorMessage(err));
+    }
+  };
+
+  const handleAssignBatch = async (userId: string, userName: string) => {
+    const batchId = selectedBatch[userId];
+    if (!batchId) { setError("Pick a batch first."); return; }
+    setError(null);
+    setAssigning(userId);
+    try {
+      await adminApi.enrollInBatch(batchId, userId);
+      const batchName = batches.find((b) => b.id === batchId)?.name || "the batch";
+      setSuccess(`${userName} enrolled in ${batchName}.`);
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setAssigning(null);
     }
   };
 
@@ -94,6 +114,7 @@ export const ManageUsersPage: React.FC = () => {
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Role</th>
+              <th className="px-4 py-3">Batch</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Joined</th>
               <th className="px-4 py-3 text-right">Actions</th>
@@ -102,13 +123,13 @@ export const ManageUsersPage: React.FC = () => {
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
-                  <span className="inline-flex items-center gap-1.5"><span className="text-primary font-black text-xs">ARC</span> Loading…</span>
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                  <span className="inline-flex items-center gap-1.5"><span className="text-brand-600 font-black text-xs">ARC</span> Loading…</span>
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
                   No users found.
                 </td>
               </tr>
@@ -129,6 +150,31 @@ export const ManageUsersPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.role === "student" ? (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={selectedBatch[u.id] || ""}
+                          onChange={(e) => setSelectedBatch((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                          className="rounded-md border border-slate-200 px-2 py-1 text-xs max-w-[130px]"
+                        >
+                          <option value="">Select batch</option>
+                          {batches.map((b) => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleAssignBatch(u.id, u.name)}
+                          disabled={assigning === u.id || !selectedBatch[u.id]}
+                          className="text-xs font-semibold text-brand-600 hover:text-brand-700 disabled:opacity-40 whitespace-nowrap"
+                        >
+                          {assigning === u.id ? "…" : "Assign"}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span
