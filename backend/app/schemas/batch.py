@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 class BatchCreate(BaseModel):
     name: str
     course: Optional[str] = None
-    facultyId: UUID
+    facultyId: Optional[UUID] = None
     trainerId: Optional[UUID] = None
     startDate: Optional[date] = None
     endDate: Optional[date] = None

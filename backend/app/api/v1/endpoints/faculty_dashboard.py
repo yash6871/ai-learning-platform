@@ -18,6 +18,8 @@ def create_batch(
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(faculty_or_trainer),
 ):
+    if payload.facultyId is None:
+        payload.facultyId = current_user.id
     return BatchService(db).create_batch(payload)
 
 
