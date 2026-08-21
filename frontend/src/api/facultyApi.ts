@@ -64,11 +64,15 @@ export const generateQuestionsWithAI = (payload: {
 // ---------- Assessments ----------
 export const createAssessment = (payload: {
   title: string; description?: string; type: string; questionIds: string[];
-  duration: number; batchIds?: string[];
+  duration: number; batchIds?: string[]; maxViolations?: number;
 }) => apiClient.post<Assessment>("/assessments", payload).then((r) => r.data);
 
 export const getMyAssessments = () =>
   apiClient.get<Assessment[]>("/assessments").then((r) => r.data);
+
+// Admin/Super Admin: every assessment across all faculty, not just "mine".
+export const getAllAssessments = () =>
+  apiClient.get<Assessment[]>("/assessments/all").then((r) => r.data);
 
 // ---------- Performance ----------
 export const getBatchAnalytics = (batchId: string) =>
