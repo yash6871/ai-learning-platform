@@ -15,22 +15,6 @@ from app.schemas import student_schemas as sc
 GEMINI_COST_PER_1K_TOKENS = 0.0005  # illustrative; move to config if needed
 
 
-def _assessment_dict_is_currently_active(assessment: dict) -> bool:
-    """Same logic as Assessment.is_currently_active(), but for the plain
-    dict that StudentRepository.get_assessment() returns (raw SQL row),
-    since that dict has no model methods."""
-    if not assessment.get("is_active"):
-        return False
-    now = datetime.utcnow()
-    active_from = assessment.get("active_from")
-    active_until = assessment.get("active_until")
-    if active_from and now < active_from.replace(tzinfo=None):
-        return False
-    if active_until and now > active_until.replace(tzinfo=None):
-        return False
-    return True
-
-
 # --------------------------------------------------------------------------
 # MCQ option handling
 #
@@ -99,7 +83,31 @@ class StudentService:
 
     # ---------- Profile ----------
     def get_profile(self, user_id: str) -> sc.StudentProfileOut:
-        return sc.StudentProfileOut.model_validate(self.repo.get_or_create_profile(user_id))
+        out = sc.StudentProfileOut.model_validate(self.repo.get_or_create_profile(user_id))
+
+        from app.models.course import BatchStudent, Batch, Course
+        from app.models.user import User
+
+        link = self.db.query(BatchStudent).filter(BatchStudent.user_id == user_id).first()
+        if link:
+            batch = self.db.query(Batch).filter(Batch.id == link.batch_id).first()
+            if batch:
+                out.batch_name = batch.name
+                if batch.course_id:
+                    course = self.db.query(Course).filter(Course.id == batch.course_id).first()
+                    out.course_name = course.name if course else None
+                faculty_id = batch.faculty_id or batch.trainer_id
+                if faculty_id:
+                    faculty = self.db.query(User).filter(User.id == faculty_id).first()
+                    out.faculty_name = faculty.name if faculty else None
+
+        out.course_progress = self.repo.get_progress_percent(user_id)
+
+        history = self.get_assessment_history(user_id)
+        percentiles = [h.percentile for h in history if h.percentile is not None]
+        out.average_percentile = round(sum(percentiles) / len(percentiles), 1) if percentiles else None
+
+        return out
 
     def update_profile(self, user_id: str, payload: sc.StudentProfileUpdate) -> sc.StudentProfileOut:
         data = payload.model_dump(exclude_unset=True, by_alias=False)
@@ -183,7 +191,7 @@ class StudentService:
             raise HTTPException(status_code=404, detail="Assessment not found")
 
         existing = self.repo.get_existing_in_progress_result(assessment_id, user_id)
-        if not existing and not _assessment_dict_is_currently_active(assessment):
+        if not existing and not assessment.is_currently_active():
             raise HTTPException(
                 status_code=403,
                 detail="This assessment is not currently active. Contact your faculty.",
@@ -216,38 +224,16 @@ class StudentService:
         result = existing or self.repo.create_result(assessment_id, user_id)
 
         questions = self.repo.get_questions_for_assessment(assessment_id)
-
-        from app.models.assessment import CodingQuestion, TestCase
-        coding_qids = [q["id"] for q in questions if q["type"] == "coding"]
-        sample_tests_by_qid: dict = {}
-        if coding_qids:
-            cqs = self.db.query(CodingQuestion).filter(CodingQuestion.question_id.in_(coding_qids)).all()
-            cq_by_question_id = {str(cq.question_id): cq.id for cq in cqs}
-            if cq_by_question_id:
-                tcs = self.db.query(TestCase).filter(
-                    TestCase.coding_question_id.in_(cq_by_question_id.values()), TestCase.is_hidden == False,  # noqa: E712
-                ).all()
-                tcs_by_cq_id: dict = {}
-                for tc in tcs:
-                    tcs_by_cq_id.setdefault(tc.coding_question_id, []).append(tc)
-                for qid, cq_id in cq_by_question_id.items():
-                    sample_tests_by_qid[qid] = [
-                        sc.SampleTestCaseOut(input=tc.input, expected_output=tc.expected_output)
-                        for tc in tcs_by_cq_id.get(cq_id, [])
-                    ]
-
         return sc.AssessmentAttemptOut(
             result_id=result["id"],
             assessment_id=assessment_id,
             title=assessment["title"],
             duration=assessment["duration"],
             started_at=result["started_at"],
-            max_violations=assessment.get("max_violations") or 10,
             questions=[
                 sc.QuestionForAttempt(
                     id=q["id"], question_text=q["question_text"], type=q["type"],
                     options=_visible_options(q), marks=q["marks"],
-                    sample_test_cases=sample_tests_by_qid.get(str(q["id"])),
                 )
                 for q in questions
             ],
@@ -359,44 +345,17 @@ class StudentService:
 
     def get_assessment_history(self, user_id: str) -> list[sc.AssessmentHistoryItem]:
         rows = self.repo.list_assessment_history(user_id)
-        from app.models.assessment import Question, Assessment as AssessmentModel
         out = []
         for r in rows:
             rank, percentile = (None, None)
             if r["status"] == "completed":
                 rank, percentile = self.repo.compute_rank_and_percentile(str(r["assessment_id"]), user_id, r["score"])
-
-            max_score = None
-            try:
-                assessment = self.db.query(AssessmentModel).filter(AssessmentModel.id == r["assessment_id"]).first()
-                if assessment:
-                    inline_qs = self.db.query(Question).filter(Question.assessment_id == r["assessment_id"]).all()
-                    bank_ids = [qid for qid in (assessment.question_ids or []) if str(qid) not in {str(q.id) for q in inline_qs}]
-                    bank_qs = self.db.query(Question).filter(Question.id.in_(bank_ids)).all() if bank_ids else []
-                    all_qs = inline_qs + bank_qs
-                    if all_qs:
-                        max_score = sum(q.marks for q in all_qs)
-            except Exception:
-                pass
-
             out.append(sc.AssessmentHistoryItem(
                 result_id=r["result_id"], assessment_title=r["assessment_title"], type=r["type"],
-                score=r["score"], max_score=max_score, status=r["status"], percentile=percentile, rank=rank,
+                score=r["score"], status=r["status"], percentile=percentile, rank=rank,
                 submitted_at=r["submitted_at"],
             ))
         return out
-
-    def get_batch_summary(self, user_id: str) -> list[dict]:
-        """Batches the student is enrolled in — shown on the Assessment
-        History dashboard alongside overall stats."""
-        from app.models.course import BatchStudent, Batch
-        rows = (
-            self.db.query(Batch)
-            .join(BatchStudent, BatchStudent.batch_id == Batch.id)
-            .filter(BatchStudent.user_id == user_id)
-            .all()
-        )
-        return [{"id": str(b.id), "name": b.name} for b in rows]
 
     # ---------- Coding Lab ----------
     async def run_code(self, user_id: str, payload: sc.CodeRunRequest) -> sc.CodeRunResult:

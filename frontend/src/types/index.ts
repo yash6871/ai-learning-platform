@@ -111,6 +111,11 @@ export interface StudentPortalProfile {
   githubUrl?: string;
   linkedinUrl?: string;
   avatarUrl?: string;
+  courseName?: string;
+  batchName?: string;
+  facultyName?: string;
+  courseProgress?: number;
+  averagePercentile?: number;
 }
 
 export type StudentProfileUpdate = Partial<Omit<StudentPortalProfile, "id" | "userId">>;
@@ -193,9 +198,6 @@ export interface QuestionForAttempt {
   /** MCQ choices only — the server strips the correct answer before sending. */
   options?: string[] | null;
   marks: number;
-  /** Coding questions only: visible (non-hidden) test cases so the student
-   * knows the exact I/O contract before writing code. */
-  sampleTestCases?: { input?: string; expectedOutput?: string }[] | null;
 }
 
 export interface AvailableAssessment {
@@ -214,7 +216,6 @@ export interface AssessmentAttempt {
   duration: number;
   startedAt: string;
   questions: QuestionForAttempt[];
-  maxViolations?: number;
 }
 
 export interface AnswerSubmit {
@@ -240,7 +241,6 @@ export interface AssessmentHistoryItem {
   assessmentTitle: string;
   type: string;
   score: number;
-  maxScore?: number;
   status: string;
   percentile?: number;
   rank?: number;
@@ -366,7 +366,6 @@ export interface Assessment {
   createdAt: string;
   questionCount: number;
   batchIds?: string[];
-  maxViolations?: number;
 }
 
 export interface StudentPerformanceRow {

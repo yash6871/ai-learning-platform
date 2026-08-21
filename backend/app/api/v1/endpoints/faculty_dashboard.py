@@ -51,3 +51,13 @@ def batch_students(
     current_user: CurrentUser = Depends(faculty_or_trainer),
 ):
     return BatchService(db).list_students(batch_id)
+
+
+@router.get("/batches/{batch_id}/assignments-progress",
+            summary="Every assignment, with completion count for this batch's students")
+def batch_assignments_progress(
+    batch_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(faculty_or_trainer),
+):
+    return BatchService(db).assignments_progress(batch_id)

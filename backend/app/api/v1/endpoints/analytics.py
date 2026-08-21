@@ -19,6 +19,17 @@ def student_analytics(user_id: UUID, db: Session = Depends(get_db), current_user
     return AnalyticsService(db).student_analytics(user_id)
 
 
+@router.get("/dashboard-summary")
+def dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("faculty", "trainer", "admin", "super_admin")),
+):
+    """Overview cards + per-batch progress for the Dashboard landing page.
+    Admin/Super Admin see every batch; Faculty/Trainer see only their own."""
+    is_admin = current_user.role in ("admin", "super_admin")
+    return AnalyticsService(db).dashboard_summary(current_user.id, is_admin=is_admin)
+
+
 @router.get("/batches/{batch_id}", response_model=schemas.BatchAnalyticsOut)
 def batch_analytics(batch_id: UUID, db: Session = Depends(get_db), actor=Depends(require_roles(*STAFF_ROLES))):
     return AnalyticsService(db).batch_analytics(batch_id)
