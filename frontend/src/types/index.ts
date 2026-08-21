@@ -58,6 +58,7 @@ export interface UserListItem {
   role: Role;
   isActive: boolean;
   createdAt: string;
+  batchName?: string | null;
 }
 
 export interface SignInLogItem {

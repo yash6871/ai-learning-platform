@@ -65,6 +65,7 @@ export const ManageUsersPage: React.FC = () => {
       await adminApi.enrollInBatch(batchId, userId);
       const batchName = batches.find((b) => b.id === batchId)?.name || "the batch";
       setSuccess(`${userName} enrolled in ${batchName}.`);
+      loadUsers();
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -153,24 +154,35 @@ export const ManageUsersPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-3">
                     {u.role === "student" ? (
-                      <div className="flex items-center gap-1.5">
-                        <select
-                          value={selectedBatch[u.id] || ""}
-                          onChange={(e) => setSelectedBatch((prev) => ({ ...prev, [u.id]: e.target.value }))}
-                          className="rounded-md border border-slate-200 px-2 py-1 text-xs max-w-[130px]"
-                        >
-                          <option value="">Select batch</option>
-                          {batches.map((b) => (
-                            <option key={b.id} value={b.id}>{b.name}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => handleAssignBatch(u.id, u.name)}
-                          disabled={assigning === u.id || !selectedBatch[u.id]}
-                          className="text-xs font-semibold text-brand-600 hover:text-brand-700 disabled:opacity-40 whitespace-nowrap"
-                        >
-                          {assigning === u.id ? "…" : "Assign"}
-                        </button>
+                      <div className="space-y-1">
+                        {u.batchName ? (
+                          <span className="inline-block text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            {u.batchName}
+                          </span>
+                        ) : (
+                          <span className="inline-block text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                            Unassigned
+                          </span>
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={selectedBatch[u.id] || ""}
+                            onChange={(e) => setSelectedBatch((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                            className="rounded-md border border-slate-200 px-2 py-1 text-xs max-w-[130px]"
+                          >
+                            <option value="">{u.batchName ? "Change batch" : "Select batch"}</option>
+                            {batches.map((b) => (
+                              <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => handleAssignBatch(u.id, u.name)}
+                            disabled={assigning === u.id || !selectedBatch[u.id]}
+                            className="text-xs font-semibold text-brand-600 hover:text-brand-700 disabled:opacity-40 whitespace-nowrap"
+                          >
+                            {assigning === u.id ? "…" : "Assign"}
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <span className="text-xs text-slate-300">—</span>

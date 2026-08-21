@@ -12,6 +12,7 @@ class UserOut(BaseModel):
     role: str
     isActive: bool = True
     createdAt: datetime
+    batchName: Optional[str] = None
 
 
 class UserListResponse(BaseModel):

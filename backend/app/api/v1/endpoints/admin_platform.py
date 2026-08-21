@@ -11,10 +11,11 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 ADMIN_ROLES = ("Super Admin", "Admin")
 
 
-def _user_out(u) -> schemas.UserOut:
+def _user_out(u, batch_name: str | None = None) -> schemas.UserOut:
     return schemas.UserOut(
         id=u.id, name=u.name, email=u.email, role=u.role,
         isActive=bool(getattr(u, "is_active", True)), createdAt=u.created_at,
+        batchName=batch_name,
     )
 
 
@@ -22,7 +23,23 @@ def _user_out(u) -> schemas.UserOut:
 def list_users(role: str | None = None, search: str | None = None, skip: int = 0, limit: int = 50,
                 db: Session = Depends(get_db), actor=Depends(require_roles(*ADMIN_ROLES))):
     users, total = AdminService(db).list_users(role, skip, limit, search)
-    return schemas.UserListResponse(total=total, items=[_user_out(u) for u in users])
+
+    # Batch name per student, fetched in one query instead of one-per-row.
+    from app.models.course import BatchStudent, Batch
+    student_ids = [u.id for u in users if u.role == "student"]
+    batch_by_user: dict = {}
+    if student_ids:
+        rows = (
+            db.query(BatchStudent.user_id, Batch.name)
+            .join(Batch, Batch.id == BatchStudent.batch_id)
+            .filter(BatchStudent.user_id.in_(student_ids))
+            .all()
+        )
+        batch_by_user = {uid: name for uid, name in rows}
+
+    return schemas.UserListResponse(
+        total=total, items=[_user_out(u, batch_by_user.get(u.id)) for u in users]
+    )
 
 
 @router.post("/users", response_model=schemas.UserOut, status_code=201)
