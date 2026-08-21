@@ -43,6 +43,28 @@ def get_student_attendance(
     return AttendanceService(db).get_student_history(student_id)
 
 
+@router.get("/report", summary="Attendance report table: batch/date-range/name filters")
+def attendance_report(
+    batch_id: UUID | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    student_name: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(faculty_or_trainer),
+):
+    return AttendanceService(db).attendance_report(batch_id, start_date, end_date, student_name)
+
+
+@router.get("/student/{student_id}/full-detail", summary="Full student detail for the Attendance drill-down")
+def student_full_detail(
+    student_id: UUID,
+    batch_id: UUID | None = None,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(faculty_or_trainer),
+):
+    return AttendanceService(db).student_full_detail(student_id, batch_id)
+
+
 @router.post("/face-recognition-hook", summary="Placeholder hook to trigger face-recognition attendance (FAC-002)")
 async def face_recognition_hook(
     payload: AttendanceFaceRecognitionHook,

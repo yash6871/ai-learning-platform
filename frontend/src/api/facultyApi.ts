@@ -90,6 +90,51 @@ export const getBatchAttendance = (batchId: string, forDate: string) =>
 export const triggerFaceRecognitionAttendance = (batchId: string, date: string, imageUrl?: string) =>
   apiClient.post("/attendance/face-recognition-hook", { batchId, date, imageUrl }).then((r) => r.data);
 
+export interface AttendanceReportRow {
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  totalLectures: number;
+  missedLectures: number;
+  onlineLectures: number;
+  offlineLectures: number;
+}
+
+export const getAttendanceReport = (params: { batchId?: string; startDate?: string; endDate?: string; studentName?: string }) =>
+  apiClient.get<AttendanceReportRow[]>("/attendance/report", {
+    params: {
+      batch_id: params.batchId || undefined,
+      start_date: params.startDate || undefined,
+      end_date: params.endDate || undefined,
+      student_name: params.studentName || undefined,
+    },
+  }).then((r) => r.data);
+
+export interface StudentFullDetail {
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  totalLectures: number;
+  onlineLectures: number;
+  offlineLectures: number;
+  assignmentsSubmitted: number;
+  mocksGiven: number;
+  rank: number | null;
+  score: number | null;
+  assignmentsScore: number | null;
+  mockScore: number | null;
+  batchName: string | null;
+  facultyName: string | null;
+  jobsApplied: number;
+  jobsRejected: number;
+  placed: boolean;
+}
+
+export const getStudentFullDetail = (studentId: string, batchId?: string) =>
+  apiClient.get<StudentFullDetail>(`/attendance/student/${studentId}/full-detail`, {
+    params: { batch_id: batchId || undefined },
+  }).then((r) => r.data);
+
 // ---------- Question Bank ----------
 export const createQuestion = (payload: Question) =>
   apiClient.post<Question>("/question-bank", payload).then((r) => r.data);
