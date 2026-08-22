@@ -52,7 +52,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/registration/staff",  label: "Register Student", roles: ["super_admin","admin","faculty","trainer","hr","placement_coordinator"], icon: Icons.userPlus },
       { to: "/registration/invite", label: "Invite Links",      roles: ["super_admin","admin","faculty","trainer","hr","placement_coordinator"], icon: Icons.userPlus },
-      { to: "/registration/bulk",   label: "Bulk Upload",       roles: ["super_admin","admin","faculty","trainer","hr","placement_coordinator"], icon: Icons.userPlus },
     ],
   },
   {

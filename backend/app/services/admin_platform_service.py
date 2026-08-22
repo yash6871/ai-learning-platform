@@ -54,10 +54,35 @@ class AdminService:
         return updated
 
     def delete_user(self, actor, user_id):
+        from sqlalchemy.exc import IntegrityError
+        from app.models.registration import SignInLog
+
         user = self.repo.get_user(user_id)
         if not user:
             raise HTTPException(404, "User not found")
-        self.repo.delete_user(user)
+
+        # Sign-in logs are pure history with nothing else depending on
+        # them — safe to purge alongside the user. Other tables (results,
+        # batch enrollments, assessments they created, etc.) are NOT
+        # touched here on purpose: silently cascading those away could
+        # quietly break another student's rank/percentile or a batch's
+        # roster. If those exist, the delete below fails with a clear
+        # message instead of a raw 500, and the admin can deactivate the
+        # account instead of deleting it.
+        self.db.query(SignInLog).filter(SignInLog.user_id == user_id).delete()
+
+        try:
+            self.repo.delete_user(user)
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "This user has related records (batch enrollments, results, "
+                    "submissions, etc.) and can't be deleted. Use 'Revoke access' "
+                    "instead to disable their account without losing that history."
+                ),
+            )
         self.repo.add_audit_log(actor.id, "delete_user", "admin", "user", user_id, {})
 
     # Courses

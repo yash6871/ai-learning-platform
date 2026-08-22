@@ -46,8 +46,6 @@ PERMISSIONS_CATALOG = [
      "defaultRoles": ["super_admin", "faculty", "trainer", "hr", "placement_coordinator", "manager"]},
     {"path": "/registration/invite", "label": "Invite Links", "group": "Registration",
      "defaultRoles": ["super_admin", "faculty", "trainer", "hr", "placement_coordinator", "manager"]},
-    {"path": "/registration/bulk", "label": "Bulk Upload", "group": "Registration",
-     "defaultRoles": ["super_admin", "faculty", "trainer", "hr", "placement_coordinator", "manager"]},
 
     {"path": "/faculty/dashboard", "label": "Faculty Dashboard", "group": "Faculty Portal",
      "defaultRoles": ["faculty", "trainer", "super_admin"]},

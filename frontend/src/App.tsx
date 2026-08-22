@@ -130,7 +130,6 @@ const App: React.FC = () => (
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/registration/staff" element={gate(STAFF_ROLES, <StaffRegisterStudentPage />)} />
           <Route path="/registration/invite" element={gate(STAFF_ROLES, <InviteLinkPage />)} />
-          <Route path="/registration/bulk" element={gate(STAFF_ROLES, <BulkUploadPage />)} />
           <Route path="/admin/users" element={gate(ADMIN_ROLES, <ManageUsersPage />)} />
           <Route path="/admin/sign-in-logs" element={gate(ADMIN_ROLES, <SignInLogsPage />)} />
 
