@@ -121,7 +121,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/admin/user-management",  label: "Manage Users",        roles: ["super_admin"], icon: Icons.users },
       { to: "/admin/sign-in-logs",     label: "Sign-In Activity",    roles: ["super_admin"], icon: Icons.logs },
       { to: "/admin/courses-batches",  label: "Courses & Batches",   roles: ["super_admin","admin"], icon: Icons.book },
-      { to: "/admin/students",         label: "Students",            roles: ["super_admin","admin"], icon: Icons.users },
+      { to: "/admin/students",         label: "Students",            roles: ["super_admin","admin","hr"], icon: Icons.users },
       { to: "/admin/faculty",          label: "Faculty",             roles: ["super_admin","admin"], icon: Icons.users },
       { to: "/admin/payments",         label: "Payments",            roles: ["super_admin","admin","manager"], icon: Icons.card },
       { to: "/admin/fees",             label: "Fees",                roles: ["super_admin","admin","manager"], icon: Icons.card },

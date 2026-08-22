@@ -231,7 +231,7 @@ export default function AttendancePage() {
               <div key={s.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-slate-800">{s.name}</p>
-                  <p className="text-xs text-slate-400">{s.email}</p>
+                  <p className="text-xs text-slate-400">{s.email}{s.phone ? ` · ${s.phone}` : ""}</p>
                 </div>
                 <div className="flex gap-2">
                   {(["present", "late", "absent"] as AttendanceStatus[]).map((st) => (

@@ -167,7 +167,7 @@ const App: React.FC = () => (
           <Route path="/hr/offers" element={gate(HR_ROLES, <OffersPage />)} />
           <Route path="/counsellor/leads" element={gate(COUNSELLOR_ROLES, <Leads />)} />
           <Route path="/admin/faculty" element={gate(ADMIN_ROLES, <FacultyDirectory />)} />
-          <Route path="/admin/students" element={gate(ADMIN_ROLES, <StudentsDirectory />)} />
+          <Route path="/admin/students" element={gate([...ADMIN_ROLES, "hr"], <StudentsDirectory />)} />
           <Route path="/admin/fees" element={gate([...ADMIN_ROLES, "manager"], <FeesPage />)} />
           <Route path="/hr/analytics" element={gate(HR_ROLES, <HrAnalyticsPage />)} />
           <Route path="/interview/schedule" element={gate(INTERVIEW_ROLES, <ScheduleInterviewPage />)} />

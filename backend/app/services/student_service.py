@@ -16,6 +16,22 @@ from app.schemas import student_schemas as sc
 GEMINI_COST_PER_1K_TOKENS = 0.0005  # illustrative; move to config if needed
 
 
+def _assessment_dict_is_currently_active(assessment: dict) -> bool:
+    """Same logic as Assessment.is_currently_active(), but for the plain
+    dict that StudentRepository.get_assessment() returns (raw SQL row),
+    since that dict has no model methods."""
+    if not assessment.get("is_active"):
+        return False
+    now = datetime.utcnow()
+    active_from = assessment.get("active_from")
+    active_until = assessment.get("active_until")
+    if active_from and now < active_from.replace(tzinfo=None):
+        return False
+    if active_until and now > active_until.replace(tzinfo=None):
+        return False
+    return True
+
+
 # --------------------------------------------------------------------------
 # MCQ option handling
 #
@@ -203,7 +219,7 @@ class StudentService:
             raise HTTPException(status_code=404, detail="Assessment not found")
 
         existing = self.repo.get_existing_in_progress_result(assessment_id, user_id)
-        if not existing and not assessment.is_currently_active():
+        if not existing and not _assessment_dict_is_currently_active(assessment):
             raise HTTPException(
                 status_code=403,
                 detail="This assessment is not currently active. Contact your faculty.",

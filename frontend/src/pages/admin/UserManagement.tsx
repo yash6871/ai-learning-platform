@@ -309,6 +309,7 @@ export default function UserManagement() {
             <tr>
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Phone</th>
               <th className="p-3 text-left">Role</th>
               <th className="p-3 text-left">Batch</th>
               <th className="p-3 text-left">Access</th>
@@ -320,6 +321,7 @@ export default function UserManagement() {
               <tr key={u.id} className="border-t border-slate-100 dark:border-slate-800">
                 <td className="p-3 text-ink-900 dark:text-slate-100">{u.name}</td>
                 <td className="p-3 text-ink-700 dark:text-slate-300">{u.email}</td>
+                <td className="p-3 text-ink-700 dark:text-slate-300">{u.phone || "—"}</td>
                 <td className="p-3">
                   <select
                     className="rounded-md border border-slate-200 px-2 py-1 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
