@@ -68,6 +68,8 @@ export const assessmentApi = {
       .then((r) => r.data),
   history: () =>
     apiClient.get<AssessmentHistoryItem[]>(`${BASE}/assessments/history`).then((r) => r.data),
+  historyBatches: () =>
+    apiClient.get<{ id: string; name: string }[]>(`${BASE}/assessments/history/batches`).then((r) => r.data),
 };
 
 export const codingApi = {

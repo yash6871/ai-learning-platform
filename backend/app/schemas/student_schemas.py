@@ -224,6 +224,7 @@ class AssessmentHistoryItem(CamelModel):
     assessment_title: str
     type: str
     score: float
+    max_score: Optional[float] = None
     status: str
     percentile: Optional[float] = None
     rank: Optional[int] = None

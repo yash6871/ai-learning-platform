@@ -357,17 +357,44 @@ class StudentService:
 
     def get_assessment_history(self, user_id: str) -> list[sc.AssessmentHistoryItem]:
         rows = self.repo.list_assessment_history(user_id)
+        from app.models.assessment import Question, Assessment as AssessmentModel
         out = []
         for r in rows:
             rank, percentile = (None, None)
             if r["status"] == "completed":
                 rank, percentile = self.repo.compute_rank_and_percentile(str(r["assessment_id"]), user_id, r["score"])
+
+            max_score = None
+            try:
+                assessment = self.db.query(AssessmentModel).filter(AssessmentModel.id == r["assessment_id"]).first()
+                if assessment:
+                    inline_qs = self.db.query(Question).filter(Question.assessment_id == r["assessment_id"]).all()
+                    bank_ids = [qid for qid in (assessment.question_ids or []) if str(qid) not in {str(q.id) for q in inline_qs}]
+                    bank_qs = self.db.query(Question).filter(Question.id.in_(bank_ids)).all() if bank_ids else []
+                    all_qs = inline_qs + bank_qs
+                    if all_qs:
+                        max_score = sum(q.marks for q in all_qs)
+            except Exception:
+                pass
+
             out.append(sc.AssessmentHistoryItem(
                 result_id=r["result_id"], assessment_title=r["assessment_title"], type=r["type"],
-                score=r["score"], status=r["status"], percentile=percentile, rank=rank,
+                score=r["score"], max_score=max_score, status=r["status"], percentile=percentile, rank=rank,
                 submitted_at=r["submitted_at"],
             ))
         return out
+
+    def get_batch_summary(self, user_id: str) -> list[dict]:
+        """Batches the student is enrolled in — shown on the Assessment
+        History dashboard alongside overall stats."""
+        from app.models.course import BatchStudent, Batch
+        rows = (
+            self.db.query(Batch)
+            .join(BatchStudent, BatchStudent.batch_id == Batch.id)
+            .filter(BatchStudent.user_id == user_id)
+            .all()
+        )
+        return [{"id": str(b.id), "name": b.name} for b in rows]
 
     # ---------- Coding Lab ----------
     async def run_code(self, user_id: str, payload: sc.CodeRunRequest) -> sc.CodeRunResult:
