@@ -331,6 +331,7 @@ export interface StudentInBatch {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
 }
 
 export type AttendanceStatus = "present" | "absent" | "late";
@@ -466,6 +467,7 @@ export interface UserOut {
   name: string;
   email: string;
   role: string;
+  phone?: string | null;
   isActive: boolean;
   createdAt: string;
   batchName?: string | null;
