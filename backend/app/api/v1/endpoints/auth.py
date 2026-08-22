@@ -72,6 +72,11 @@ def logout(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme), d
 
 @router.get("/me", response_model=UserOut)  # ACC-008
 def get_me(current_user: User = Depends(get_current_user)):
+    from app.core.permissions_catalog import default_permissions_for_role
+    effective_permissions = (
+        current_user.permissions if getattr(current_user, "permissions", None) is not None
+        else default_permissions_for_role(current_user.role)
+    )
     return UserOut(
         id=str(current_user.id),
         name=current_user.name,
@@ -79,4 +84,5 @@ def get_me(current_user: User = Depends(get_current_user)):
         role=current_user.role,
         phone=current_user.phone,
         isActive=current_user.is_active,
+        permissions=effective_permissions,
     )

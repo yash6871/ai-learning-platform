@@ -12,11 +12,15 @@ const ROLES = [
   { value: "trainer", label: "Trainer" },
   { value: "hr", label: "HR" },
   { value: "placement_coordinator", label: "Placement Coordinator" },
+  { value: "counsellor", label: "Counsellor" },
+  { value: "manager", label: "Manager" },
   { value: "student", label: "Student" },
   { value: "guest", label: "Guest" },
 ];
 
 const EMPTY_FORM = { name: "", email: "", password: "", role: "faculty" };
+
+interface CatalogItem { path: string; label: string; group: string; defaultRoles: string[] }
 
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
@@ -33,6 +37,13 @@ export default function UserManagement() {
   const [creating, setCreating] = useState(false);
   const [createdMessage, setCreatedMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Permissions picker (Super Admin only)
+  const [catalog, setCatalog] = useState<CatalogItem[] | null>(null);
+  const [permUser, setPermUser] = useState<UserOut | null>(null);
+  const [permChecked, setPermChecked] = useState<Set<string>>(new Set());
+  const [permIsCustom, setPermIsCustom] = useState(false);
+  const [savingPerms, setSavingPerms] = useState(false);
 
   const load = () => {
     adminApi.listUsers(filterRole || undefined).then(setUsers).catch((e) => setError(e.message));
@@ -86,6 +97,58 @@ export default function UserManagement() {
       setCreating(false);
     }
   };
+
+  const openPermissions = async (u: UserOut) => {
+    setPermUser(u);
+    if (!catalog) {
+      const cat = await adminApi.permissionsCatalog();
+      setCatalog(cat);
+    }
+    const current = await adminApi.getUserPermissions(u.id);
+    setPermChecked(new Set(current.permissions));
+    setPermIsCustom(current.isCustom);
+  };
+
+  const togglePerm = (path: string) => {
+    setPermChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path); else next.add(path);
+      return next;
+    });
+  };
+
+  const savePermissions = async () => {
+    if (!permUser) return;
+    setSavingPerms(true);
+    try {
+      await adminApi.setUserPermissions(permUser.id, Array.from(permChecked));
+      setPermUser(null);
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSavingPerms(false);
+    }
+  };
+
+  const resetToDefault = async () => {
+    if (!permUser) return;
+    setSavingPerms(true);
+    try {
+      await adminApi.setUserPermissions(permUser.id, null);
+      setPermUser(null);
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSavingPerms(false);
+    }
+  };
+
+  const groupedCatalog = (catalog || []).reduce((acc: Record<string, CatalogItem[]>, item) => {
+    (acc[item.group] ||= []).push(item);
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-6">
@@ -247,6 +310,8 @@ export default function UserManagement() {
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Email</th>
               <th className="p-3 text-left">Role</th>
+              <th className="p-3 text-left">Batch</th>
+              <th className="p-3 text-left">Access</th>
               <th className="p-3 text-left">Actions</th>
             </tr>
           </thead>
@@ -268,6 +333,30 @@ export default function UserManagement() {
                   </select>
                 </td>
                 <td className="p-3">
+                  {u.role === "student" ? (
+                    u.batchName ? (
+                      <span className="inline-block text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full dark:bg-emerald-950 dark:text-emerald-300">
+                        {u.batchName}
+                      </span>
+                    ) : (
+                      <span className="inline-block text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full dark:bg-amber-950 dark:text-amber-300">
+                        Unassigned
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                  )}
+                </td>
+                <td className="p-3">
+                  {isSuperAdmin ? (
+                    <button onClick={() => openPermissions(u)} className="text-xs text-brand-600 hover:underline font-medium">
+                      {u.hasCustomPermissions ? "Custom access" : "Default access"}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                  )}
+                </td>
+                <td className="p-3">
                   <button
                     onClick={() => removeUser(u.id)}
                     disabled={!isSuperAdmin}
@@ -281,6 +370,58 @@ export default function UserManagement() {
           </tbody>
         </table>
       </div>
+
+      {/* Permissions picker modal */}
+      {permUser && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setPermUser(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-display text-lg font-bold text-ink-900 dark:text-white">Access for {permUser.name}</h2>
+              <button onClick={() => setPermUser(null)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+            </div>
+            <p className="text-xs text-slate-400 mb-4">
+              {permIsCustom ? "This user has a custom access list." : `Showing default access for role "${permUser.role}". Check/uncheck to customize.`}
+            </p>
+
+            {!catalog ? (
+              <p className="text-sm text-slate-400">Loading…</p>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(groupedCatalog).map(([group, items]) => (
+                  <div key={group}>
+                    <p className="text-xs font-semibold uppercase text-slate-400 mb-1.5">{group}</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {items.map((item) => (
+                        <label key={item.path} className="flex items-center gap-2 text-sm text-ink-700 dark:text-slate-200">
+                          <input type="checkbox" checked={permChecked.has(item.path)} onChange={() => togglePerm(item.path)} />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-between mt-6">
+              <button onClick={resetToDefault} disabled={savingPerms}
+                className="text-xs text-slate-500 hover:underline disabled:opacity-50">
+                Reset to role default
+              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setPermUser(null)}
+                  className="px-4 py-2 rounded-lg text-sm border border-slate-200 dark:border-slate-700 dark:text-slate-200">
+                  Cancel
+                </button>
+                <button onClick={savePermissions} disabled={savingPerms}
+                  className="px-4 py-2 rounded-lg text-sm bg-brand-600 text-white font-semibold hover:bg-brand-700 disabled:opacity-60">
+                  {savingPerms ? "Saving…" : "Save access"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,12 +1,24 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { codingApi } from "../../api/studentApi";
+import { apiClient } from "../../api/client";
 import CodeEditor from "../../components/CodeEditor";
+import ArcLoader from "../../components/ArcLoader";
 import type { CodingQuestion, CodeRunResult, CodeSubmitResult } from "../../types";
+
+interface CodingListItem { id: string; questionText: string; language: string; marks: number }
 
 export default function CodingLab() {
   const { codingQuestionId } = useParams<{ codingQuestionId: string }>();
+  const navigate = useNavigate();
+
+  // ── Picker (no question selected yet) ────────────────────────────────
+  const [list, setList] = useState<CodingListItem[] | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
+
+  // ── Selected question ────────────────────────────────────────────────
   const [question, setQuestion] = useState<CodingQuestion | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [customInput, setCustomInput] = useState("");
   const [runResult, setRunResult] = useState<CodeRunResult | null>(null);
@@ -15,11 +27,31 @@ export default function CodingLab() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // Pre-warm the backend (Render free tier sleeps after ~15 min idle) —
+    // fired as soon as this page loads, so by the time the student clicks
+    // "Run", the backend is hopefully already awake.
+    apiClient.get("/api/v1/health").catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (codingQuestionId) return;
+    setList(null);
+    setListError(null);
+    codingApi.list()
+      .then(setList)
+      .catch(() => setListError("Couldn't load coding questions. Please try again."));
+  }, [codingQuestionId]);
+
+  useEffect(() => {
     if (!codingQuestionId) return;
-    codingApi.get(codingQuestionId).then((q) => {
-      setQuestion(q);
-      setCode(q.starterCode || "");
-    });
+    setQuestion(null);
+    setLoadError(null);
+    codingApi.get(codingQuestionId)
+      .then((q) => {
+        setQuestion(q);
+        setCode(q.starterCode || "");
+      })
+      .catch(() => setLoadError("This coding question couldn't be loaded. It may have been removed."));
   }, [codingQuestionId]);
 
   const handleRun = async () => {
@@ -51,13 +83,62 @@ export default function CodingLab() {
     }
   };
 
-  if (!question) return <div className="text-gray-500">Loading coding question...</div>;
+  // ── Picker view: no question ID in the URL ───────────────────────────
+  if (!codingQuestionId) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-4">
+        <h1 className="text-lg font-bold text-gray-800">Coding Lab</h1>
+        <p className="text-sm text-gray-500">Pick a question to practice.</p>
+
+        {listError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-4">
+            {listError}
+          </div>
+        )}
+        {!listError && list === null && <ArcLoader label="Loading coding questions" />}
+        {!listError && list !== null && list.length === 0 && (
+          <p className="text-sm text-gray-400">No coding questions are available yet. Check back later.</p>
+        )}
+        {!listError && list !== null && list.length > 0 && (
+          <div className="space-y-2">
+            {list.map((q) => (
+              <button
+                key={q.id}
+                onClick={() => navigate(`/student/coding-lab/${q.id}`)}
+                className="w-full text-left bg-white rounded-xl border border-gray-200 p-4 hover:border-primary hover:shadow-sm transition"
+              >
+                <p className="text-sm font-medium text-gray-800">{q.questionText}</p>
+                <p className="text-xs text-gray-400 mt-1">{q.language} · {q.marks} marks</p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Selected question failed to load ──────────────────────────────────
+  if (loadError) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-16 space-y-3">
+        <p className="text-red-600">{loadError}</p>
+        <Link to="/student/coding-lab" className="text-sm text-primary font-medium hover:underline">
+          ← Back to Coding Lab
+        </Link>
+      </div>
+    );
+  }
+
+  if (!question) return <ArcLoader label="Loading coding question" />;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h1 className="text-lg font-bold text-gray-800 mb-2">Coding Lab</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-lg font-bold text-gray-800">Coding Lab</h1>
+            <Link to="/student/coding-lab" className="text-xs text-primary font-medium hover:underline">← All questions</Link>
+          </div>
           <p className="text-sm text-gray-600 whitespace-pre-wrap">{question.questionText}</p>
           <p className="text-xs text-gray-400 mt-2">Language: {question.language} · {question.marks} marks</p>
         </div>

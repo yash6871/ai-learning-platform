@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { assessmentApi } from "../api/studentApi";
 
 type IconProps = { className?: string };
 const icon = (path: React.ReactNode) => ({ className = "h-5 w-5" }: IconProps) => (
@@ -83,43 +82,53 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Faculty Portal",
     collapsible: true,
     items: [
-      { to: "/faculty/dashboard",      label: "Faculty Dashboard",    roles: ["faculty","trainer","admin","super_admin"], icon: Icons.dashboard },
-      { to: "/faculty/announcements",  label: "Announcements",        roles: ["faculty","trainer","admin","super_admin"], icon: Icons.megaphone },
-      { to: "/faculty/attendance",     label: "Attendance",           roles: ["faculty","trainer","admin","super_admin"], icon: Icons.clipboard },
-      { to: "/faculty/question-bank",  label: "Question Bank",        roles: ["faculty","trainer","admin","super_admin"], icon: Icons.book },
-      { to: "/faculty/assessments",    label: "My Assessments",       roles: ["faculty","trainer","admin","super_admin"], icon: Icons.clipboard },
-      { to: "/faculty/assessments/new","label": "Create Assessment",  roles: ["faculty","trainer","admin","super_admin"], icon: Icons.clipboard },
-      { to: "/faculty/evaluate",       label: "Evaluate Assignments",  roles: ["faculty","trainer","admin","super_admin"], icon: Icons.clipboard },
-      { to: "/faculty/performance",    label: "Student Performance",  roles: ["faculty","trainer","admin","super_admin"], icon: Icons.chart },
-      { to: "/faculty/mock-interviews","label": "Mock Interviews",    roles: ["faculty","trainer","admin","super_admin"], icon: Icons.chat },
-      { to: "/faculty/reports",        label: "Reports",              roles: ["faculty","trainer","admin","super_admin"], icon: Icons.chart },
-      { to: "/faculty/chat",           label: "Chat with Students",   roles: ["faculty","trainer","admin","super_admin"], icon: Icons.chat },
+      { to: "/faculty/dashboard",      label: "Faculty Dashboard",    roles: ["faculty","trainer","super_admin"], icon: Icons.dashboard },
+      { to: "/faculty/announcements",  label: "Announcements",        roles: ["faculty","trainer","super_admin"], icon: Icons.megaphone },
+      { to: "/faculty/attendance",     label: "Attendance",           roles: ["faculty","trainer","super_admin","manager"], icon: Icons.clipboard },
+      { to: "/faculty/question-bank",  label: "Question Bank",        roles: ["faculty","trainer","super_admin"], icon: Icons.book },
+      { to: "/faculty/assessments",    label: "My Assessments",       roles: ["faculty","trainer","super_admin"], icon: Icons.clipboard },
+      { to: "/faculty/assessments/new","label": "Create Assessment",  roles: ["faculty","trainer","super_admin"], icon: Icons.clipboard },
+      { to: "/faculty/evaluate",       label: "Evaluate Assignments",  roles: ["faculty","trainer","super_admin"], icon: Icons.clipboard },
+      { to: "/faculty/performance",    label: "Student Performance",  roles: ["faculty","trainer","super_admin"], icon: Icons.chart },
+      { to: "/faculty/mock-interviews","label": "Mock Interviews",    roles: ["faculty","trainer","super_admin"], icon: Icons.chat },
+      { to: "/faculty/reports",        label: "Reports",              roles: ["faculty","trainer","super_admin"], icon: Icons.chart },
+      { to: "/faculty/chat",           label: "Chat with Students",   roles: ["faculty","trainer","super_admin"], icon: Icons.chat },
+    ],
+  },
+  {
+    label: "Counsellor",
+    collapsible: true,
+    items: [
+      { to: "/counsellor/leads", label: "Leads", roles: ["counsellor","super_admin"], icon: Icons.users },
     ],
   },
   {
     label: "HR / Placement",
     collapsible: true,
     items: [
-      { to: "/hr/companies",        label: "Companies",           roles: ["hr","placement_coordinator","admin","super_admin"], icon: Icons.building },
-      { to: "/hr/jobs",             label: "Jobs",                roles: ["hr","placement_coordinator","admin","super_admin"], icon: Icons.briefcase },
-      { to: "/hr/candidate-match",  label: "Candidate Matching",  roles: ["hr","placement_coordinator","admin","super_admin"], icon: Icons.target },
-      { to: "/hr/offers",           label: "Offers",              roles: ["hr","placement_coordinator","admin","super_admin"], icon: Icons.card },
-      { to: "/hr/analytics",        label: "Placement Analytics", roles: ["hr","placement_coordinator","admin","super_admin"], icon: Icons.chart },
-      { to: "/interview/schedule",  label: "Schedule Interview",  roles: ["hr","placement_coordinator","faculty","trainer","admin","super_admin"], icon: Icons.chat },
-      { to: "/interview/conduct",   label: "Conduct Interview",   roles: ["hr","placement_coordinator","faculty","trainer","admin","super_admin"], icon: Icons.chat },
+      { to: "/hr/companies",        label: "Companies",           roles: ["hr","placement_coordinator","super_admin"], icon: Icons.building },
+      { to: "/hr/jobs",             label: "Jobs",                roles: ["hr","placement_coordinator","super_admin"], icon: Icons.briefcase },
+      { to: "/hr/candidate-match",  label: "Candidate Matching",  roles: ["hr","placement_coordinator","super_admin"], icon: Icons.target },
+      { to: "/hr/offers",           label: "Offers",              roles: ["hr","placement_coordinator","super_admin"], icon: Icons.card },
+      { to: "/hr/analytics",        label: "Placement Analytics", roles: ["hr","placement_coordinator","super_admin"], icon: Icons.chart },
+      { to: "/interview/schedule",  label: "Schedule Interview",  roles: ["hr","placement_coordinator","faculty","trainer","super_admin"], icon: Icons.chat },
+      { to: "/interview/conduct",   label: "Conduct Interview",   roles: ["hr","placement_coordinator","faculty","trainer","super_admin"], icon: Icons.chat },
     ],
   },
   {
     label: "Administration",
     collapsible: true,
     items: [
-      { to: "/admin/user-management",  label: "Manage Users",        roles: ["super_admin","admin"], icon: Icons.users },
-      { to: "/admin/sign-in-logs",     label: "Sign-In Activity",    roles: ["super_admin","admin"], icon: Icons.logs },
+      { to: "/admin/user-management",  label: "Manage Users",        roles: ["super_admin"], icon: Icons.users },
+      { to: "/admin/sign-in-logs",     label: "Sign-In Activity",    roles: ["super_admin"], icon: Icons.logs },
       { to: "/admin/courses-batches",  label: "Courses & Batches",   roles: ["super_admin","admin"], icon: Icons.book },
-      { to: "/admin/payments",         label: "Payments",            roles: ["super_admin","admin"], icon: Icons.card },
-      { to: "/admin/settings",         label: "Platform Settings",   roles: ["super_admin","admin"], icon: Icons.settings },
-      { to: "/admin/audit-log",        label: "Audit Log",           roles: ["super_admin","admin"], icon: Icons.logs },
-      { to: "/admin/ai-usage",         label: "AI Usage Dashboard",  roles: ["super_admin","admin"], icon: Icons.bot },
+      { to: "/admin/students",         label: "Students",            roles: ["super_admin","admin"], icon: Icons.users },
+      { to: "/admin/faculty",          label: "Faculty",             roles: ["super_admin","admin"], icon: Icons.users },
+      { to: "/admin/payments",         label: "Payments",            roles: ["super_admin","admin","manager"], icon: Icons.card },
+      { to: "/admin/fees",             label: "Fees",                roles: ["super_admin","admin","manager"], icon: Icons.card },
+      { to: "/admin/settings",         label: "Platform Settings",   roles: ["super_admin"], icon: Icons.settings },
+      { to: "/admin/audit-log",        label: "Audit Log",           roles: ["super_admin"], icon: Icons.logs },
+      { to: "/admin/ai-usage",         label: "AI Usage Dashboard",  roles: ["super_admin"], icon: Icons.bot },
       { to: "/admin/notifications",    label: "Notifications",       roles: ["super_admin","admin"], icon: Icons.bell },
     ],
   },
@@ -210,7 +219,6 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("arc-nav-collapsed") === "1");
-  const [myBatches, setMyBatches] = useState<{ id: string; name: string }[]>([]);
 
   const toggleCollapsed = () => {
     setCollapsed((v) => { localStorage.setItem("arc-nav-collapsed", !v ? "1" : "0"); return !v; });
@@ -221,16 +229,15 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const brandTitle = isStudent ? "ARC Students Portal" : "ARC Technologies & Institutions";
   const brandSubtitle = isStudent ? "Learning, Assessments & Placement" : "AI Learning & Placement Platform";
 
-  useEffect(() => {
-    if (isStudent) {
-      assessmentApi.historyBatches().then(setMyBatches).catch(() => {});
-    }
-  }, [isStudent]);
-
-
   const groups = NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((item) => user && item.roles.includes(user.role)),
+    items: g.items.filter((item) => {
+      if (!user) return false;
+      // A Super Admin-set custom permission list overrides the role
+      // default entirely — only show items explicitly granted.
+      if (user.permissions) return user.permissions.includes(item.to);
+      return item.roles.includes(user.role);
+    }),
   })).filter((g) => g.items.length > 0);
 
   const handleLogout = async () => { await logout(); navigate("/login"); };
@@ -320,11 +327,6 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            {isStudent && myBatches.length > 0 && (
-              <span className="hidden sm:inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
-                🎓 {myBatches.map((b) => b.name).join(", ")}
-              </span>
-            )}
             <button onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
               {theme === "dark" ? <Icons.sun className="h-4 w-4" /> : <Icons.moon className="h-4 w-4" />}
             </button>

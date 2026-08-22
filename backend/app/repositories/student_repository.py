@@ -159,6 +159,29 @@ class StudentRepository:
         self.db.refresh(cert)
         return cert
 
+    def get_certificate(self, cert_id: str, user_id: str) -> StudentCertificate | None:
+        return self.db.query(StudentCertificate).filter(
+            StudentCertificate.id == cert_id, StudentCertificate.user_id == user_id,
+        ).first()
+
+    def update_certificate(self, cert_id: str, user_id: str, data: dict) -> StudentCertificate | None:
+        cert = self.get_certificate(cert_id, user_id)
+        if not cert:
+            return None
+        for k, v in data.items():
+            setattr(cert, k, v)
+        self.db.commit()
+        self.db.refresh(cert)
+        return cert
+
+    def delete_certificate(self, cert_id: str, user_id: str) -> bool:
+        cert = self.get_certificate(cert_id, user_id)
+        if not cert:
+            return False
+        self.db.delete(cert)
+        self.db.commit()
+        return True
+
     # ---------- Learning ----------
     def list_syllabus_with_progress(self, user_id: str) -> list[dict]:
         items = self.db.query(Syllabus).order_by(Syllabus.order_index).all()

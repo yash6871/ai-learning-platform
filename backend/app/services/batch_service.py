@@ -108,6 +108,39 @@ class BatchService:
             "mocksScheduled": mocks_count,
         }
 
+    def faculty_directory(self) -> list[dict]:
+        """Every faculty/trainer with the batches assigned to them — used by
+        the Admin 'Faculty' directory page (Faculty name -> their batches ->
+        click a batch to see its students)."""
+        from app.models.user import User
+        from app.models.course import Batch
+
+        all_batches = self.db.query(Batch).all()
+        by_faculty: dict = {}
+        for b in all_batches:
+            faculty_id = b.faculty_id or b.trainer_id
+            if not faculty_id:
+                continue
+            by_faculty.setdefault(faculty_id, []).append(b)
+
+        rows = []
+        for faculty_id, batches in by_faculty.items():
+            faculty = self.db.query(User).filter(User.id == faculty_id).first()
+            if not faculty:
+                continue
+            rows.append({
+                "facultyId": str(faculty_id),
+                "facultyName": faculty.name,
+                "facultyEmail": faculty.email,
+                "batches": [
+                    {"batchId": str(b.id), "batchName": b.name, "course": b.course.name if b.course else None,
+                     "studentCount": self.repo.student_count(b.id)}
+                    for b in batches
+                ],
+            })
+        rows.sort(key=lambda r: r["facultyName"])
+        return rows
+
     def batches_summary(self, requester_id: UUID, is_admin: bool = False) -> List[dict]:
         """Row data for the Faculty Dashboard batches table: dates, delay,
         syllabus %, batch time, and assessment/mock counts given to each

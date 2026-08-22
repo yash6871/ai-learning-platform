@@ -9,6 +9,18 @@ from app.schemas import student_schemas as sc
 router = APIRouter(prefix="/api/v1/student/coding", tags=["Student Coding Lab"])
 
 
+@router.get("", response_model=list[sc.CodingQuestionListItem])
+def list_coding_questions(
+    current_user: CurrentUser = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """Coding questions available to browse/practice — the Coding Lab
+    landing page (no specific question ID in the URL) shows this list so
+    students can pick one, instead of the page getting stuck on 'Loading'
+    forever with nothing to fetch."""
+    return StudentService(db).list_coding_questions()
+
+
 @router.get("/{coding_question_id}", response_model=sc.CodingQuestionOut)
 def get_coding_question(
     coding_question_id: str,

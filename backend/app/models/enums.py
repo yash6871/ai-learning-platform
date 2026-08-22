@@ -8,6 +8,8 @@ class RoleEnum(str, enum.Enum):
     TRAINER = "trainer"
     HR = "hr"
     PLACEMENT_COORDINATOR = "placement_coordinator"
+    COUNSELLOR = "counsellor"
+    MANAGER = "manager"
     STUDENT = "student"
     GUEST = "guest"
 

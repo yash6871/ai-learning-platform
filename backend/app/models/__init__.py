@@ -34,6 +34,7 @@ from app.models.student_extras import (  # noqa: F401
     CodeReview,
 )
 from app.models.attendance import Attendance  # noqa: F401
+from app.models.staff_attendance import StaffAttendance  # noqa: F401
 from app.models.announcement import Announcement, AnnouncementBatch  # noqa: F401
 from app.models.assignment_feedback import AssignmentFeedback  # noqa: F401
 from app.models.mock_interview import (  # noqa: F401
@@ -42,6 +43,8 @@ from app.models.mock_interview import (  # noqa: F401
     MockInterviewEvaluation,
 )
 from app.models.placement import Company, Job, Application, Interview, Offer  # noqa: F401
+from app.models.lead import Lead  # noqa: F401
+from app.models.fee_structure import FeeStructure, FeeInstallment  # noqa: F401
 from app.models.admin_platform import (  # noqa: F401
     AuditLog,
     Notification,

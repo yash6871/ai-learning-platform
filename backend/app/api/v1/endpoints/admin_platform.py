@@ -15,7 +15,7 @@ def _user_out(u, batch_name: str | None = None) -> schemas.UserOut:
     return schemas.UserOut(
         id=u.id, name=u.name, email=u.email, role=u.role,
         isActive=bool(getattr(u, "is_active", True)), createdAt=u.created_at,
-        batchName=batch_name,
+        batchName=batch_name, hasCustomPermissions=getattr(u, "permissions", None) is not None,
     )
 
 

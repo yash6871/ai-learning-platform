@@ -29,6 +29,8 @@ from app.api.v1.endpoints import (
     analytics,
     notifications,
     ai_assistant,
+    leads,
+    fees,
 )
 
 # Group 1: routers that already declare a full "/api/v1/..." prefix on
@@ -44,7 +46,7 @@ for _r in (auth, registration, admin_users, hr, interviews, student_profile,
 short_prefixed_router = APIRouter(prefix="/api/v1")
 for _r in (announcements, assessments, attendance, faculty_dashboard, mock_interview,
            performance, question_bank, reports, admin_platform, analytics,
-           notifications, ai_assistant):
+           notifications, ai_assistant, leads, fees):
     short_prefixed_router.include_router(_r.router)
 
 # Combined router for convenience - app/main.py includes both groups.

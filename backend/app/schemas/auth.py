@@ -47,6 +47,7 @@ class UserOut(BaseModel):
     role: str
     phone: Optional[str] = None
     isActive: bool
+    permissions: Optional[list[str]] = None  # effective list: custom override if set, else role default
 
 
 class ChangePasswordRequest(BaseModel):

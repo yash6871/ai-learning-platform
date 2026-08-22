@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import faculty_or_trainer, CurrentUser
+from app.api.deps import faculty_or_trainer, require_roles, CurrentUser
 from app.db.session import get_db
 from app.schemas.attendance import AttendanceMarkRequest, AttendanceOut, AttendanceFaceRecognitionHook
 from app.services.attendance_service import AttendanceService
@@ -63,6 +63,61 @@ def student_full_detail(
     current_user: CurrentUser = Depends(faculty_or_trainer),
 ):
     return AttendanceService(db).student_full_detail(student_id, batch_id)
+
+
+STAFF_ATTENDANCE_ROLES = ("manager", "super_admin")
+
+
+@router.get("/staff-list", summary="Faculty/trainer list for the staff-attendance picker")
+def staff_list(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_roles(*STAFF_ATTENDANCE_ROLES)),
+):
+    from app.models.user import User
+    users = db.query(User).filter(User.role.in_(["faculty", "trainer"])).order_by(User.name).all()
+    return [{"id": str(u.id), "name": u.name, "email": u.email} for u in users]
+
+
+@router.post("/staff", summary="Manager: mark a faculty/trainer's attendance for a date")
+def mark_staff_attendance(
+    payload: dict,  # {"staffId": str, "date": "YYYY-MM-DD", "status": "present"|"absent"|"late"}
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_roles(*STAFF_ATTENDANCE_ROLES)),
+):
+    from datetime import date as date_cls
+    from app.models.staff_attendance import StaffAttendance
+
+    staff_id = payload.get("staffId")
+    entry_date = date_cls.fromisoformat(payload.get("date"))
+    status = payload.get("status", "present")
+
+    existing = db.query(StaffAttendance).filter(
+        StaffAttendance.staff_id == staff_id, StaffAttendance.date == entry_date,
+    ).first()
+    if existing:
+        existing.status = status
+        existing.marked_by = current_user.id
+    else:
+        db.add(StaffAttendance(staff_id=staff_id, date=entry_date, status=status, marked_by=current_user.id))
+    db.commit()
+    return {"status": "ok"}
+
+
+@router.get("/staff", summary="Manager: view faculty/trainer attendance for a date")
+def get_staff_attendance(
+    for_date: date,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_roles(*STAFF_ATTENDANCE_ROLES)),
+):
+    from app.models.staff_attendance import StaffAttendance
+    from app.models.user import User
+    rows = (
+        db.query(StaffAttendance, User)
+        .join(User, User.id == StaffAttendance.staff_id)
+        .filter(StaffAttendance.date == for_date)
+        .all()
+    )
+    return [{"staffId": str(sa.staff_id), "name": u.name, "status": sa.status} for sa, u in rows]
 
 
 @router.post("/face-recognition-hook", summary="Placeholder hook to trigger face-recognition attendance (FAC-002)")

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.repositories.student_repository import StudentRepository
 from app.services.ai_provider import get_ai_client
@@ -120,6 +121,17 @@ class StudentService:
     def add_certificate(self, user_id: str, payload: sc.CertificateCreate) -> sc.CertificateOut:
         cert = self.repo.add_certificate(user_id, payload.model_dump(by_alias=False))
         return sc.CertificateOut.model_validate(cert)
+
+    def update_certificate(self, user_id: str, cert_id: str, payload: sc.CertificateCreate) -> sc.CertificateOut:
+        cert = self.repo.update_certificate(cert_id, user_id, payload.model_dump(by_alias=False, exclude_unset=True))
+        if not cert:
+            raise HTTPException(status_code=404, detail="Certificate not found")
+        return sc.CertificateOut.model_validate(cert)
+
+    def delete_certificate(self, user_id: str, cert_id: str) -> None:
+        ok = self.repo.delete_certificate(cert_id, user_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Certificate not found")
 
     # ---------- Learning ----------
     def get_syllabus(self, user_id: str) -> list[sc.SyllabusItemOut]:
@@ -418,6 +430,14 @@ class StudentService:
             ],
             ai_review=ai_review,
         )
+
+    def list_coding_questions(self) -> list[sc.CodingQuestionListItem]:
+        rows = self.db.execute(text(
+            """SELECT cq.id, q.question_text, cq.language, q.marks
+               FROM coding_questions cq JOIN questions q ON q.id = cq.question_id
+               ORDER BY cq.created_at DESC"""
+        )).mappings().all()
+        return [sc.CodingQuestionListItem.model_validate(dict(r)) for r in rows]
 
     def get_coding_question_out(self, coding_question_id: str) -> sc.CodingQuestionOut:
         cq = self.repo.get_coding_question(coding_question_id)

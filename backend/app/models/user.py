@@ -2,7 +2,7 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import String, Boolean, DateTime, ForeignKey
-from app.core.db_types import UUID
+from app.core.db_types import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -25,6 +25,12 @@ class User(BaseModel):
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+    # Per-user custom access override, set by Super Admin (e.g. via a
+    # checkbox picker on Create/Edit User). Null means "use the default
+    # access for this user's role" (unchanged legacy behavior). A non-null
+    # list restricts the user to exactly those nav item paths, regardless
+    # of what their role would normally see.
+    permissions: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
 
     student_profile: Mapped[Optional["StudentProfile"]] = relationship(
         "StudentProfile", back_populates="user", uselist=False, foreign_keys="StudentProfile.user_id",

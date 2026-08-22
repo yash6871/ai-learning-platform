@@ -15,7 +15,7 @@ from app.core.database import get_db
 from app.core.deps import require_roles, ADMIN_ROLES
 from app.models.user import User
 from app.services.admin_users_service import AdminService
-from app.schemas.admin_users import UserListItem, RevokeAccessRequest, SignInLogOut, AssignBatchRequest
+from app.schemas.admin_users import UserListItem, RevokeAccessRequest, SignInLogOut
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Admin - Access & Sign-in Logs"])
 
@@ -31,19 +31,44 @@ def set_access(
     return UserListItem(id=str(user.id), name=user.name, email=user.email, role=user.role, isActive=user.is_active, createdAt=user.created_at)
 
 
-@router.post("/users/{user_id}/assign-batch", status_code=204)
-def assign_batch(
+@router.get("/permissions-catalog", summary="Full nav-item catalog for the Super Admin's permission checkbox picker")
+def permissions_catalog(current_user: User = Depends(require_roles("super_admin"))):
+    from app.core.permissions_catalog import PERMISSIONS_CATALOG
+    return PERMISSIONS_CATALOG
+
+
+@router.get("/users/{user_id}/permissions", summary="Get a user's effective permissions (custom override or role default)")
+def get_user_permissions(
     user_id: uuid.UUID,
-    payload: AssignBatchRequest,
-    current_user: User = Depends(require_roles(*ADMIN_ROLES)),
+    current_user: User = Depends(require_roles("super_admin")),
     db: Session = Depends(get_db),
 ):
-    """Enrols an already-registered student into a course+batch after the
-    fact. Needed because students who sign up via the plain public
-    /auth/register page (as opposed to an invite link) get no batch on
-    creation, which makes them invisible to every batch-scoped view
-    (Faculty Student Performance, batch rosters, attendance, etc)."""
-    AdminService(db).assign_student_to_batch(user_id, payload.courseId, payload.batchId)
+    from app.core.permissions_catalog import default_permissions_for_role
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "userId": str(user.id),
+        "isCustom": user.permissions is not None,
+        "permissions": user.permissions if user.permissions is not None else default_permissions_for_role(user.role),
+    }
+
+
+@router.put("/users/{user_id}/permissions", summary="Set a custom permission list for a user, or clear it back to role defaults")
+def set_user_permissions(
+    user_id: uuid.UUID,
+    payload: dict,  # {"permissions": list[str] | None}  — None clears the override, reverting to role defaults
+    current_user: User = Depends(require_roles("super_admin")),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="User not found")
+    user.permissions = payload.get("permissions")
+    db.commit()
+    return {"userId": str(user.id), "permissions": user.permissions}
 
 
 @router.get("/sign-in-logs")  # ADM-007

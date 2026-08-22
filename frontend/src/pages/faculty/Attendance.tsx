@@ -5,6 +5,8 @@ import {
 } from "../../api/facultyApi";
 import ArcLoader from "../../components/ArcLoader";
 import { FacultyBatch, StudentInBatch, AttendanceStatus, AttendanceRecord } from "../../types";
+import { useAuth } from "../../context/AuthContext";
+import { api } from "../../services/api";
 
 function DetailStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -16,6 +18,48 @@ function DetailStat({ label, value }: { label: string; value: React.ReactNode })
 }
 
 export default function AttendancePage() {
+  const { user } = useAuth();
+  const isManager = user?.role === "manager" || user?.role === "super_admin";
+
+  // ── Staff (faculty) attendance — Manager only ────────────────────────────
+  const [staffList, setStaffList] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [staffDate, setStaffDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [staffStatuses, setStaffStatuses] = useState<Record<string, AttendanceStatus>>({});
+  const [savingStaff, setSavingStaff] = useState(false);
+
+  useEffect(() => {
+    if (!isManager) return;
+    api.get<{ id: string; name: string; email: string }[]>("/api/v1/attendance/staff-list").then((r) => setStaffList(r.data)).catch(() => {});
+  }, [isManager]);
+
+  useEffect(() => {
+    if (!isManager) return;
+    api.get<{ staffId: string; status: AttendanceStatus }[]>("/api/v1/attendance/staff", { params: { for_date: staffDate } })
+      .then((r) => {
+        const map: Record<string, AttendanceStatus> = {};
+        r.data.forEach((row) => (map[row.staffId] = row.status));
+        setStaffStatuses(map);
+      })
+      .catch(() => {});
+  }, [isManager, staffDate]);
+
+  const setStaffStatus = (staffId: string, status: AttendanceStatus) => {
+    setStaffStatuses((prev) => ({ ...prev, [staffId]: status }));
+  };
+
+  const saveStaffAttendance = async () => {
+    setSavingStaff(true);
+    try {
+      await Promise.all(
+        staffList.map((s) =>
+          api.post("/api/v1/attendance/staff", { staffId: s.id, date: staffDate, status: staffStatuses[s.id] || "present" })
+        )
+      );
+    } finally {
+      setSavingStaff(false);
+    }
+  };
+
   // ── Mark attendance (existing feature, kept as-is) ──────────────────────
   const [batches, setBatches] = useState<FacultyBatch[]>([]);
   const [batchId, setBatchId] = useState<string>("");
@@ -119,6 +163,46 @@ export default function AttendancePage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-10">
+      {/* ── Faculty attendance — Manager only ─────────────────────────────── */}
+      {isManager && (
+        <div>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <h1 className="text-2xl font-semibold text-slate-800">Faculty Attendance</h1>
+            <input type="date" className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              value={staffDate} onChange={(e) => setStaffDate(e.target.value)} />
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl divide-y divide-slate-100">
+            {staffList.map((s) => (
+              <div key={s.id} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{s.name}</p>
+                  <p className="text-xs text-slate-400">{s.email}</p>
+                </div>
+                <div className="flex gap-2">
+                  {(["present", "late", "absent"] as AttendanceStatus[]).map((st) => (
+                    <button key={st} onClick={() => setStaffStatus(s.id, st)}
+                      className={`text-xs px-3 py-1.5 rounded-full capitalize ${
+                        staffStatuses[s.id] === st
+                          ? st === "present" ? "bg-emerald-600 text-white" : st === "late" ? "bg-amber-500 text-white" : "bg-rose-600 text-white"
+                          : "bg-slate-200 text-slate-500"
+                      }`}>
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {staffList.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">No faculty/trainer accounts found.</p>}
+          </div>
+          {staffList.length > 0 && (
+            <button onClick={saveStaffAttendance} disabled={savingStaff}
+              className="mt-4 bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+              {savingStaff ? "Saving…" : "Save Faculty Attendance"}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Mark attendance ─────────────────────────────────────────────── */}
       <div>
         <h1 className="text-2xl font-semibold text-slate-800 mb-4">Mark Attendance</h1>

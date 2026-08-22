@@ -10,6 +10,7 @@ class UserListItem(BaseModel):
     role: str
     isActive: bool
     createdAt: datetime
+    batchName: Optional[str] = None
 
 
 class ChangeRoleRequest(BaseModel):
@@ -18,11 +19,6 @@ class ChangeRoleRequest(BaseModel):
 
 class RevokeAccessRequest(BaseModel):
     isActive: bool
-
-
-class AssignBatchRequest(BaseModel):
-    courseId: str  # UUID, course code, or course name — resolved server-side
-    batchId: str   # UUID or batch name — resolved server-side
 
 
 class SignInLogOut(BaseModel):

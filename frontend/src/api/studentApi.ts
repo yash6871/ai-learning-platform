@@ -21,6 +21,10 @@ export const profileApi = {
     apiClient.get<Certificate[]>(`${BASE}/profile/certificates`).then((r) => r.data),
   addCertificate: (data: CertificateCreate) =>
     apiClient.post<Certificate>(`${BASE}/profile/certificates`, data).then((r) => r.data),
+  updateCertificate: (id: string, data: CertificateCreate) =>
+    apiClient.put<Certificate>(`${BASE}/profile/certificates/${id}`, data).then((r) => r.data),
+  deleteCertificate: (id: string) =>
+    apiClient.delete(`${BASE}/profile/certificates/${id}`),
 };
 
 export const learningApi = {
@@ -64,11 +68,11 @@ export const assessmentApi = {
       .then((r) => r.data),
   history: () =>
     apiClient.get<AssessmentHistoryItem[]>(`${BASE}/assessments/history`).then((r) => r.data),
-  historyBatches: () =>
-    apiClient.get<{ id: string; name: string }[]>(`${BASE}/assessments/history/batches`).then((r) => r.data),
 };
 
 export const codingApi = {
+  list: () =>
+    apiClient.get<{ id: string; questionText: string; language: string; marks: number }[]>(`${BASE}/coding`).then((r) => r.data),
   get: (codingQuestionId: string) =>
     apiClient.get<CodingQuestion>(`${BASE}/coding/${codingQuestionId}`).then((r) => r.data),
   run: (data: CodeRunRequest) =>

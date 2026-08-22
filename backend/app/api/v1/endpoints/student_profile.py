@@ -39,3 +39,23 @@ def add_certificate(
 ):
     """STU-PR-004: Add a certificate (upload flow handled client-side via Azure Blob, URL stored here)."""
     return StudentService(db).add_certificate(current_user.id, payload)
+
+
+@router.put("/certificates/{cert_id}", response_model=sc.CertificateOut)
+def update_certificate(
+    cert_id: str,
+    payload: sc.CertificateCreate,
+    current_user: CurrentUser = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """Edit an existing certificate (title/issuer/date/URL)."""
+    return StudentService(db).update_certificate(current_user.id, cert_id, payload)
+
+
+@router.delete("/certificates/{cert_id}", status_code=204)
+def delete_certificate(
+    cert_id: str,
+    current_user: CurrentUser = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    StudentService(db).delete_certificate(current_user.id, cert_id)

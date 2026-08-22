@@ -49,6 +49,10 @@ import StudentPerformancePage from "./pages/faculty/StudentPerformance";
 // HR / Placement / Interview Portal
 import CompaniesPage from "./pages/hr/CompaniesPage";
 import OffersPage from "./pages/hr/OffersPage";
+import Leads from "./pages/counsellor/Leads";
+import FacultyDirectory from "./pages/admin/FacultyDirectory";
+import StudentsDirectory from "./pages/admin/StudentsDirectory";
+import FeesPage from "./pages/admin/FeesPage";
 import HrAnalyticsPage from "./pages/hr/AnalyticsPage";
 import ScheduleInterviewPage from "./pages/interview/ScheduleInterviewPage";
 import ConductInterviewListPage from "./pages/interview/ConductInterviewListPage";
@@ -82,6 +86,8 @@ const HR_ROLES = ["hr", "placement_coordinator", "admin", "super_admin"] as cons
 const INTERVIEW_ROLES = ["hr", "placement_coordinator", "faculty", "trainer", "admin", "super_admin"] as const;
 const STUDENT_ROLES = ["student"] as const;
 const ANALYTICS_ROLES = ["super_admin", "admin", "faculty", "trainer", "hr", "placement_coordinator"] as const;
+const COUNSELLOR_ROLES = ["counsellor", "super_admin"] as const;
+const MANAGER_ROLES = ["manager", "super_admin"] as const;
 
 function gate(roles: readonly string[], element: React.ReactNode) {
   return <ProtectedRoute allowedRoles={[...roles] as any}>{element}</ProtectedRoute>;
@@ -160,6 +166,10 @@ const App: React.FC = () => (
           <Route path="/hr/candidate-match" element={gate(HR_ROLES, <JobsPageRoute />)} />
           <Route path="/hr/candidate-match/:jobId" element={gate(HR_ROLES, <CandidateMatchPageRoute />)} />
           <Route path="/hr/offers" element={gate(HR_ROLES, <OffersPage />)} />
+          <Route path="/counsellor/leads" element={gate(COUNSELLOR_ROLES, <Leads />)} />
+          <Route path="/admin/faculty" element={gate(ADMIN_ROLES, <FacultyDirectory />)} />
+          <Route path="/admin/students" element={gate(ADMIN_ROLES, <StudentsDirectory />)} />
+          <Route path="/admin/fees" element={gate([...ADMIN_ROLES, "manager"], <FeesPage />)} />
           <Route path="/hr/analytics" element={gate(HR_ROLES, <HrAnalyticsPage />)} />
           <Route path="/interview/schedule" element={gate(INTERVIEW_ROLES, <ScheduleInterviewPage />)} />
           <Route path="/interview/conduct" element={gate(INTERVIEW_ROLES, <ConductInterviewListPage />)} />

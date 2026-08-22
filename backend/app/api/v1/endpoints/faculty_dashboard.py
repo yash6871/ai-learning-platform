@@ -63,6 +63,14 @@ def batch_assignments_progress(
     return BatchService(db).assignments_progress(batch_id)
 
 
+@router.get("/faculty-directory", summary="Admin: every faculty with their assigned batches (and student counts)")
+def faculty_directory(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(faculty_or_trainer),
+):
+    return BatchService(db).faculty_directory()
+
+
 @router.get("/my-summary", summary="My lectures/assessments/mocks activity summary")
 def my_summary(
     db: Session = Depends(get_db),

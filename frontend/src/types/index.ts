@@ -6,6 +6,8 @@ export type Role =
   | "trainer"
   | "hr"
   | "placement_coordinator"
+  | "counsellor"
+  | "manager"
   | "student"
   | "guest";
 
@@ -16,6 +18,7 @@ export interface User {
   role: Role;
   phone?: string | null;
   isActive: boolean;
+  permissions?: string[] | null;
 }
 
 export interface TokenResponse {
@@ -465,6 +468,8 @@ export interface UserOut {
   role: string;
   isActive: boolean;
   createdAt: string;
+  batchName?: string | null;
+  hasCustomPermissions?: boolean;
 }
 
 export interface UserListResponse {

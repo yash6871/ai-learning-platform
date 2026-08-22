@@ -9,6 +9,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [certForm, setCertForm] = useState<CertificateCreate | null>(null);
+  const [editingCertId, setEditingCertId] = useState<string | null>(null);
   const [addingCert, setAddingCert] = useState(false);
 
   const loadCerts = () => profileApi.listCertificates().then(setCertificates).catch(() => {});
@@ -49,11 +50,34 @@ export default function Profile() {
     if (!certForm?.title) return;
     setAddingCert(true);
     try {
-      await profileApi.addCertificate(certForm);
+      if (editingCertId) {
+        await profileApi.updateCertificate(editingCertId, certForm);
+      } else {
+        await profileApi.addCertificate(certForm);
+      }
       setCertForm(null);
+      setEditingCertId(null);
       loadCerts();
-    } catch { alert("Failed to add certificate."); }
+    } catch { alert(editingCertId ? "Failed to update certificate." : "Failed to add certificate."); }
     finally { setAddingCert(false); }
+  };
+
+  const startEditCert = (c: Certificate) => {
+    setEditingCertId(c.id);
+    setCertForm({
+      title: c.title,
+      issuer: c.issuer ?? "",
+      issueDate: (c as any).issueDate ?? "",
+      certificateUrl: c.certificateUrl ?? "",
+    });
+  };
+
+  const handleDeleteCert = async (id: string) => {
+    if (!confirm("Delete this certificate?")) return;
+    try {
+      await profileApi.deleteCertificate(id);
+      loadCerts();
+    } catch { alert("Failed to delete certificate."); }
   };
 
   if (!profile) return <div className="text-gray-500">Loading profile...</div>;
@@ -143,7 +167,7 @@ export default function Profile() {
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-gray-800">Certificates</h2>
-          <button onClick={() => setCertForm({ title: "", issuer: "", issueDate: "", certificateUrl: "" })}
+          <button onClick={() => { setEditingCertId(null); setCertForm({ title: "", issuer: "", issueDate: "", certificateUrl: "" }); }}
             className="text-xs px-3 py-1.5 bg-primary text-white rounded-lg font-medium">
             + Add Certificate
           </button>
@@ -151,7 +175,7 @@ export default function Profile() {
 
         {certForm !== null && (
           <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700">New Certificate</h3>
+            <h3 className="text-sm font-semibold text-gray-700">{editingCertId ? "Edit Certificate" : "New Certificate"}</h3>
             <input className="input" placeholder="Certificate title *" value={certForm.title}
               onChange={(e) => setCertForm({ ...certForm, title: e.target.value })} />
             <input className="input" placeholder="Issuing organization (e.g. Coursera, Google)"
@@ -171,9 +195,9 @@ export default function Profile() {
             <div className="flex gap-2">
               <button onClick={handleAddCert} disabled={addingCert || !certForm.title}
                 className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50">
-                {addingCert ? "Saving..." : "Save Certificate"}
+                {addingCert ? "Saving..." : editingCertId ? "Update Certificate" : "Save Certificate"}
               </button>
-              <button onClick={() => setCertForm(null)}
+              <button onClick={() => { setCertForm(null); setEditingCertId(null); }}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm">
                 Cancel
               </button>
@@ -192,6 +216,14 @@ export default function Profile() {
                   <a href={c.certificateUrl} target="_blank" rel="noreferrer"
                     className="text-xs text-primary underline">View credential</a>
                 )}
+              </div>
+              <div className="flex gap-3 shrink-0 ml-3">
+                <button onClick={() => startEditCert(c)} className="text-xs text-primary font-medium hover:underline">
+                  Edit
+                </button>
+                <button onClick={() => handleDeleteCert(c.id)} className="text-xs text-red-600 font-medium hover:underline">
+                  Delete
+                </button>
               </div>
             </li>
           ))}

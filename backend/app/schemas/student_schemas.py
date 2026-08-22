@@ -241,6 +241,13 @@ class CodingQuestionOut(CamelModel):
     sample_test_cases: List["TestCaseOut"] = []
 
 
+class CodingQuestionListItem(CamelModel):
+    id: UUID
+    question_text: str
+    language: str
+    marks: float
+
+
 class TestCaseOut(CamelModel):
     id: UUID
     input: str

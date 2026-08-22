@@ -13,6 +13,7 @@ class UserOut(BaseModel):
     isActive: bool = True
     createdAt: datetime
     batchName: Optional[str] = None
+    hasCustomPermissions: bool = False
 
 
 class UserListResponse(BaseModel):

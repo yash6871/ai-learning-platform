@@ -28,6 +28,11 @@ export const adminApi = {
     apiClient.post<BatchOut>(`/admin/batches`, data),
   enrollStudent: (batchId: string, userId: string) => apiClient.post(`/admin/batches/${batchId}/enroll/${userId}`),
 
+  permissionsCatalog: () => apiClient.get<{ path: string; label: string; group: string; defaultRoles: string[] }[]>(`/admin/permissions-catalog`),
+  getUserPermissions: (userId: string) => apiClient.get<{ userId: string; isCustom: boolean; permissions: string[] }>(`/admin/users/${userId}/permissions`),
+  setUserPermissions: (userId: string, permissions: string[] | null) =>
+    apiClient.put(`/admin/users/${userId}/permissions`, { permissions }),
+
   listPayments: (status?: string) => apiClient.get<PaymentOut[]>(`/admin/payments${status ? `?status=${status}` : ""}`),
   createPayment: (data: { userId: string; batchId?: string; amount: number; currency?: string; paymentMethod?: string }) =>
     apiClient.post<PaymentOut>(`/admin/payments`, data),
