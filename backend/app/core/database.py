@@ -22,7 +22,16 @@ sqlite3.register_adapter(uuid.UUID, lambda u: str(u))
 # no-op (ignored) for every other backend, including Postgres.
 connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
+engine_kwargs = {"pool_pre_ping": True, "connect_args": connect_args}
+if not settings.DATABASE_URL.startswith("sqlite"):
+    # Default pool (5 + 10 overflow = 15 max connections) is too small once
+    # a few dozen students are active at once (each request briefly opens
+    # a session — answer-saves, snapshots, violation reports, etc. all add
+    # up). pool_recycle avoids using a connection Supabase's pooler has
+    # silently dropped after sitting idle.
+    engine_kwargs.update(pool_size=15, max_overflow=25, pool_recycle=300, pool_timeout=20)
+
+engine = create_engine(settings.DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

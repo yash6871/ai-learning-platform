@@ -236,8 +236,13 @@ async def run_code(
 
     if lang in ("python", "python3"):
         from app.utils.local_python_runner import run_python, run_test_cases
+        from starlette.concurrency import run_in_threadpool
 
-        r = run_python(payload.code, stdin=payload.stdin or "")
+        # run_python/run_test_cases block on subprocess.run(), which would
+        # otherwise freeze the whole event loop (and every other student's
+        # requests, since Render's free tier runs a single worker) for the
+        # full duration of one student's code execution.
+        r = await run_in_threadpool(run_python, payload.code, payload.stdin or "")
         status = "Time Limit Exceeded" if r.timed_out else (
             "Accepted" if r.exit_code == 0 and not r.stderr else "Runtime Error"
         )
@@ -256,7 +261,7 @@ async def run_code(
                          "is_hidden": tc.is_hidden}
                         for tc in test_cases
                     ]
-                    tc_results = run_test_cases(payload.code, tc_payload)
+                    tc_results = await run_in_threadpool(run_test_cases, payload.code, tc_payload)
                     result["testResults"] = tc_results
                     result["testsPassed"] = sum(1 for t in tc_results if t["passed"])
                     result["testsTotal"] = len(tc_results)
