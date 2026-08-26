@@ -240,7 +240,7 @@ export default function QuestionBankPage() {
             <div key={q.id} className="bg-white border border-slate-200 rounded-xl p-4">
               <div className="flex justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-800">{q.questionText}</p>
+                  <p className="text-sm font-medium text-slate-800 whitespace-pre-wrap">{q.questionText}</p>
                   <p className="text-xs text-slate-400 mt-1 capitalize">
                     {q.type} · {q.marks} marks {q.tags?.length ? `· ${q.tags.join(", ")}` : ""}
                   </p>

@@ -522,7 +522,7 @@ export default function AssessmentAttempt() {
                     "bg-slate-50 text-slate-500"
                   }`}>{currentQuestion.type}</span>
                 </div>
-                <p className="text-gray-800 font-medium mb-4">{currentQuestion.questionText}</p>
+                <p className={`text-gray-800 font-medium mb-4 whitespace-pre-wrap ${["coding","sql"].includes(currentQuestion.type) ? "font-mono text-sm leading-relaxed" : ""}`}>{currentQuestion.questionText}</p>
 
                 {currentQuestion.type === "mcq" ? (
                   currentQuestion.options?.length ? (

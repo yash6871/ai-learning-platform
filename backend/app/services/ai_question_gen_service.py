@@ -24,7 +24,16 @@ Return STRICT JSON with this exact shape (a JSON array), no extra text:
 
 Rules per type:
 - mcq: data must be {{"options": ["<option 1 text>", "<option 2 text>", "<option 3 text>", "<option 4 text>"], "correctOption": "<must be an EXACT copy of one of the strings in options>"}}. Do NOT use letters like "A"/"B" for correctOption — copy the full option text.
-- sql: Write in the LeetCode style. `questionText` must contain, in order: (1) a short problem description, (2) a line "Table: <Name>" followed by one line per column as "<column_name> (<type>)", (3) an "Example:" section with sample input rows and the expected output rows, written as simple comma-separated lines (not ASCII-art tables). `data` must be {{"schemaSql": "<valid SQLite CREATE TABLE + INSERT statements that build the exact example data shown in questionText>", "schemaDisplay": "<a short copy of the Table/columns list from questionText>"}}. `testCases`: exactly 2 items, "input" left as an empty string, "expectedOutput" set to the correct query's result as one row per line with values separated by " | " (e.g. "id | salary\\n2 | 200"). Keep questionText and schemaSql short and simple — correctness matters far more than elaborate formatting.
+- sql: Write in the exact LeetCode question style, matching this structure precisely. `questionText` must contain, in order, using literal newlines (as \\n in the JSON string):
+  (1) A one-sentence problem description.
+  (2) For each table involved, a schema block:
+      "Table: <Name>\\n\\n+-------------+------+\\n| Column Name | Type |\\n+-------------+------+\\n| <col1>      | <type1> |\\n| <col2>      | <type2> |\\n+-------------+------+\\n\\n<one sentence on the primary key / what each row represents>"
+      (pad the box-drawing characters so columns visually line up, like a real LeetCode schema box; use 2+ tables if the problem naturally needs a join).
+  (3) "Write a solution to <restate the task in one sentence>."
+  (4) "Example:\\nInput:\\n<Table name> table:\\n+----+--------+\\n| col | col |\\n+----+--------+\\n| ... sample rows ...\\n+----+--------+\\n\\nOutput:\\n+---------------+\\n| <ResultColumn> |\\n+---------------+\\n| ... expected rows ...\\n+---------------+"
+  `data` must be {{"schemaSql": "<valid SQLite CREATE TABLE + INSERT statements that build the EXACT same example rows shown in questionText's Example section>", "schemaDisplay": "<the Table/columns box(es) from step 2, for the UI to render separately>"}}.
+  `testCases`: exactly 2 items, "input" left as an empty string. "expectedOutput" is NOT shown to students and is only used for automated grading, so keep it simple regardless of how fancy questionText is: one row per line, values separated by " | ", header row first (e.g. "salary\\n200" or "name | salary | department\\nAmit | 70000 | IT").
+  Keep schemaSql itself simple and syntactically correct SQLite — that part is executed for real, so correctness there matters far more than in the display text.
 - descriptive: data must be {{"guidelines": "key points expected in the answer"}}
 - coding: include starterCode, language, and 3-5 testCases (at least 1 not hidden)
 """
