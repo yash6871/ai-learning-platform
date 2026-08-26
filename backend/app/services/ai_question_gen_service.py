@@ -24,7 +24,7 @@ Return STRICT JSON with this exact shape (a JSON array), no extra text:
 
 Rules per type:
 - mcq: data must be {{"options": ["<option 1 text>", "<option 2 text>", "<option 3 text>", "<option 4 text>"], "correctOption": "<must be an EXACT copy of one of the strings in options>"}}. Do NOT use letters like "A"/"B" for correctOption — copy the full option text.
-- sql: Follow the LeetCode question style exactly. `questionText` MUST include, in this order: (1) the problem description, (2) a schema block starting with "Table: <Name>" followed by a plain-text box showing each column name and type (use +---+ style borders like a terminal table), (3) one "Example:" section showing sample "Input:" rows (as a plain-text table) and the expected "Output:" (as a plain-text table) for that exact input. `data` must be {{"schemaSql": "<valid SQLite CREATE TABLE + INSERT statements that build the SAME example data shown in questionText — this is executed for real, so it must be syntactically correct SQLite>", "schemaDisplay": "<the same 'Table: Name' box, repeated here for the UI to render separately from the question text>"}}. `testCases`: 2-3 cases, each with "input" left as an empty string (SQL questions don't take stdin) and "expectedOutput" set to the exact result rows the correct query would return against schemaSql, formatted as a plain-text table with " | " between column values, a header row of column names, and a "-+-" separator row beneath it (e.g. "id | salary\\n---+-------\\n2  | 200"). At least 1 test case must be visible (isHidden: false).
+- sql: Write in the LeetCode style. `questionText` must contain, in order: (1) a short problem description, (2) a line "Table: <Name>" followed by one line per column as "<column_name> (<type>)", (3) an "Example:" section with sample input rows and the expected output rows, written as simple comma-separated lines (not ASCII-art tables). `data` must be {{"schemaSql": "<valid SQLite CREATE TABLE + INSERT statements that build the exact example data shown in questionText>", "schemaDisplay": "<a short copy of the Table/columns list from questionText>"}}. `testCases`: exactly 2 items, "input" left as an empty string, "expectedOutput" set to the correct query's result as one row per line with values separated by " | " (e.g. "id | salary\\n2 | 200"). Keep questionText and schemaSql short and simple — correctness matters far more than elaborate formatting.
 - descriptive: data must be {{"guidelines": "key points expected in the answer"}}
 - coding: include starterCode, language, and 3-5 testCases (at least 1 not hidden)
 """
@@ -77,6 +77,17 @@ class AIQuestionGenService:
             type=payload.type, topic=payload.topic,
         )
         items, tokens_used = self.client.generate_json(prompt)
+
+        if not isinstance(items, list):
+            # The AI didn't return valid JSON for this prompt (this
+            # happens more often on complex prompts, like SQL questions
+            # with a schema + example tables) — fail cleanly with a
+            # retryable message instead of crashing on the next line.
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=502,
+                detail="The AI didn't return a valid set of questions this time. Please try generating again.",
+            )
 
         if payload.type == "mcq":
             for item in items:

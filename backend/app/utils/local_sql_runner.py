@@ -20,17 +20,16 @@ class SqlRunResult:
         self.timed_out = timed_out
 
     def as_text(self) -> str:
-        """Render as a plain-text table, similar to what a DB client shows."""
+        """Render as a simple pipe-separated table: header row, then one
+        data row per line. Matches the format AI-generated expectedOutput
+        uses, so comparison in run_sql_test_cases lines up."""
         if self.error:
             return ""
         if not self.columns:
             return "(query executed, no result set)"
-        widths = [max(len(str(c)), *(len(str(r[i])) for r in self.rows)) if self.rows else len(str(c))
-                  for i, c in enumerate(self.columns)]
-        lines = [" | ".join(str(c).ljust(widths[i]) for i, c in enumerate(self.columns))]
-        lines.append("-+-".join("-" * w for w in widths))
+        lines = [" | ".join(str(c) for c in self.columns)]
         for r in self.rows:
-            lines.append(" | ".join(str(v).ljust(widths[i]) for i, v in enumerate(r)))
+            lines.append(" | ".join(str(v) for v in r))
         return "\n".join(lines)
 
 
