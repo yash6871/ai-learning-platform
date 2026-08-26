@@ -75,6 +75,7 @@ class BatchOut(BaseModel):
     start_date: Optional[datetime]
     end_date: Optional[datetime]
     status: str
+    facultyName: Optional[str] = None
 
 
 class PaymentCreate(BaseModel):

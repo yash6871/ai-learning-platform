@@ -495,6 +495,7 @@ export interface BatchOut {
   start_date?: string;
   end_date?: string;
   status: string;
+  facultyName?: string | null;
 }
 
 export interface PaymentOut {

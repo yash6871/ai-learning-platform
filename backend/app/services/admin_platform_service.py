@@ -116,7 +116,15 @@ class AdminService:
         return batch
 
     def list_batches(self, course_id=None):
-        return self.repo.list_batches(course_id)
+        from app.models.user import User
+        batches = self.repo.list_batches(course_id)
+        for b in batches:
+            faculty_id = getattr(b, "faculty_id", None) or getattr(b, "trainer_id", None)
+            b.facultyName = None
+            if faculty_id:
+                faculty = self.db.query(User).filter(User.id == faculty_id).first()
+                b.facultyName = faculty.name if faculty else None
+        return batches
 
     def enroll_student(self, actor, batch_id, user_id):
         if not self.repo.get_batch(batch_id):

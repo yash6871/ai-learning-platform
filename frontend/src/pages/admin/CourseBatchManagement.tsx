@@ -1,21 +1,24 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "../../api/adminPlatformApi";
-import type { CourseOut, BatchOut } from "../../types";
+import type { CourseOut, BatchOut, UserOut } from "../../types";
 
 export default function CourseBatchManagement() {
   const [courses, setCourses] = useState<CourseOut[]>([]);
   const [batches, setBatches] = useState<BatchOut[]>([]);
+  const [faculty, setFaculty] = useState<UserOut[]>([]);
   const [selectedCourse, setSelectedCourse] = useState("");
   const [form, setForm] = useState({ name: "", code: "", description: "", durationWeeks: 4 });
-  const [batchForm, setBatchForm] = useState({ name: "", courseId: "" });
+  const [batchForm, setBatchForm] = useState({ name: "", courseId: "", facultyId: "" });
   const [error, setError] = useState("");
 
   const loadCourses = () => adminApi.listCourses().then(setCourses).catch((e) => setError(e.message));
   const loadBatches = (courseId?: string) => adminApi.listBatches(courseId).then(setBatches).catch((e) => setError(e.message));
+  const loadFaculty = () => adminApi.listUsers("faculty").then(setFaculty).catch(() => {});
 
   useEffect(() => {
     loadCourses();
     loadBatches();
+    loadFaculty();
   }, []);
 
   const createCourse = async () => {
@@ -31,8 +34,11 @@ export default function CourseBatchManagement() {
   const createBatch = async () => {
     if (!batchForm.courseId) return;
     try {
-      await adminApi.createBatch({ courseId: batchForm.courseId, name: batchForm.name });
-      setBatchForm({ name: "", courseId: "" });
+      await adminApi.createBatch({
+        courseId: batchForm.courseId, name: batchForm.name,
+        facultyId: batchForm.facultyId || undefined,
+      });
+      setBatchForm({ name: "", courseId: "", facultyId: "" });
       loadBatches(selectedCourse || undefined);
     } catch (e) {
       setError((e as Error).message);
@@ -82,6 +88,10 @@ export default function CourseBatchManagement() {
             <option value="">Select course</option>
             {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          <select className="border rounded-md px-3 py-2 col-span-2" value={batchForm.facultyId} onChange={(e) => setBatchForm({ ...batchForm, facultyId: e.target.value })}>
+            <option value="">Assign faculty (optional — defaults to you)</option>
+            {faculty.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.email})</option>)}
+          </select>
         </div>
         <button onClick={createBatch} className="bg-slate-800 text-white px-4 py-2 rounded-md text-sm">Create Batch</button>
       </div>
@@ -90,12 +100,13 @@ export default function CourseBatchManagement() {
         <h2 className="font-semibold text-slate-700 mb-3">Batches</h2>
         <table className="w-full text-sm">
           <thead className="text-slate-500 text-left border-b">
-            <tr><th className="py-2">Name</th><th>Status</th><th>Start</th><th>End</th></tr>
+            <tr><th className="py-2">Name</th><th>Faculty</th><th>Status</th><th>Start</th><th>End</th></tr>
           </thead>
           <tbody>
             {batches.map((b) => (
               <tr key={b.id} className="border-b last:border-0">
                 <td className="py-2">{b.name}</td>
+                <td>{b.facultyName || "—"}</td>
                 <td>{b.status}</td>
                 <td>{b.start_date?.slice(0, 10) ?? "-"}</td>
                 <td>{b.end_date?.slice(0, 10) ?? "-"}</td>
