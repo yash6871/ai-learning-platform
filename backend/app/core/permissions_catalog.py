@@ -12,7 +12,7 @@ for "what can this user see".
 PERMISSIONS_CATALOG = [
     # (path, label, group, default_roles)
     {"path": "/dashboard", "label": "Dashboard", "group": "Overview",
-     "defaultRoles": ["super_admin", "admin", "faculty", "trainer", "hr", "placement_coordinator", "counsellor", "manager", "student", "guest"]},
+     "defaultRoles": ["super_admin", "admin", "hr", "placement_coordinator", "counsellor", "manager", "guest"]},
 
     {"path": "/student/dashboard", "label": "Dashboard", "group": "Learning",
      "defaultRoles": ["student"]},
@@ -105,7 +105,7 @@ PERMISSIONS_CATALOG = [
     {"path": "/admin/notifications", "label": "Notifications", "group": "Administration",
      "defaultRoles": ["super_admin", "admin"]},
     {"path": "/admin/students", "label": "Students", "group": "Administration",
-     "defaultRoles": ["super_admin", "admin"]},
+     "defaultRoles": ["super_admin", "admin", "hr"]},
     {"path": "/admin/faculty", "label": "Faculty", "group": "Administration",
      "defaultRoles": ["super_admin", "admin"]},
     {"path": "/admin/fees", "label": "Fees", "group": "Administration",

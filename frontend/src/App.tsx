@@ -35,6 +35,8 @@ import StudentOffersPage from "./pages/student/jobs/OffersPage";
 
 // Faculty / Trainer Portal
 import FacultyDashboard from "./pages/faculty/FacultyDashboard";
+import BatchDetailPage from "./pages/faculty/BatchDetailPage";
+import StudentDetailPage from "./pages/faculty/StudentDetailPage";
 import AnnouncementsPage from "./pages/faculty/Announcements";
 import AttendancePage from "./pages/faculty/Attendance";
 import ChatPage from "./pages/faculty/Chat";
@@ -148,6 +150,8 @@ const App: React.FC = () => (
 
           {/* Faculty / Trainer Portal */}
           <Route path="/faculty/dashboard" element={gate(FACULTY_ROLES, <FacultyDashboard />)} />
+          <Route path="/faculty/batches/:batchId" element={gate(FACULTY_ROLES, <BatchDetailPage />)} />
+          <Route path="/faculty/students/:studentId" element={gate(FACULTY_ROLES, <StudentDetailPage />)} />
           <Route path="/faculty/announcements" element={gate(FACULTY_ROLES, <AnnouncementsPage />)} />
           <Route path="/faculty/attendance" element={gate(FACULTY_ROLES, <AttendancePage />)} />
           <Route path="/faculty/chat" element={gate(FACULTY_ROLES, <ChatPage />)} />

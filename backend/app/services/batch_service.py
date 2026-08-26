@@ -55,7 +55,7 @@ class BatchService:
         if not student_ids:
             return []
         users = self.db.query(User).filter(User.id.in_(student_ids)).all()
-        return [StudentInBatch(id=u.id, name=u.name, email=u.email) for u in users]
+        return [StudentInBatch(id=u.id, name=u.name, email=u.email, phone=u.phone) for u in users]
 
     def _batch_syllabus_percent(self, student_ids: List[UUID], course_id=None) -> float:
         """Average syllabus completion % across this batch's students,
@@ -183,11 +183,13 @@ class BatchService:
         return rows
 
     def batch_detail(self, batch_id: UUID) -> dict:
-        """Deep detail for the batch-detail drill-down: dates, delay,
-        syllabus %, batch time, assessments given, and an active/inactive
-        student split (active = has at least one assessment Result)."""
+        """Deep detail for the batch-detail full page: dates, delay,
+        syllabus %, batch time, assessments given, online/offline lecture
+        counts, and the full student roster with active/inactive split."""
         from datetime import date as date_cls
         from app.models.assessment import Assessment, Result
+        from app.models.attendance import Attendance
+        from app.models.user import User
 
         b = self.repo.get(batch_id)
         if not b:
@@ -203,10 +205,37 @@ class BatchService:
         ]
 
         active_ids = set()
+        results_by_student: dict = {}
         if student_ids:
-            active_ids = {
-                r.user_id for r in self.db.query(Result).filter(Result.user_id.in_(student_ids)).all()
-            }
+            all_results = self.db.query(Result).filter(Result.user_id.in_(student_ids)).all()
+            active_ids = {r.user_id for r in all_results}
+            for r in all_results:
+                results_by_student.setdefault(r.user_id, []).append(r)
+
+        # Lecture sessions for this batch, split online/offline (distinct
+        # batch+date sessions, not one row per student, since attendance
+        # marks one row per student per session).
+        sessions = (
+            self.db.query(Attendance.date, Attendance.mode)
+            .filter(Attendance.batch_id == batch_id)
+            .distinct()
+            .all()
+        )
+        online_lectures = sum(1 for s in sessions if s.mode == "online")
+        offline_lectures = sum(1 for s in sessions if s.mode != "online")
+
+        students = []
+        if student_ids:
+            users = self.db.query(User).filter(User.id.in_(student_ids)).all()
+            for u in users:
+                u_results = results_by_student.get(u.id, [])
+                scores = [r.score for r in u_results if r.score is not None]
+                students.append({
+                    "id": str(u.id), "name": u.name, "email": u.email, "phone": u.phone,
+                    "isActive": u.id in active_ids,
+                    "averageScore": round(sum(scores) / len(scores), 1) if scores else None,
+                })
+            students.sort(key=lambda s: s["name"])
 
         return {
             "batchId": str(batch_id),
@@ -221,6 +250,9 @@ class BatchService:
             "studentsCount": len(student_ids),
             "activeStudents": len(active_ids),
             "inactiveStudents": len(student_ids) - len(active_ids),
+            "onlineLectures": online_lectures,
+            "offlineLectures": offline_lectures,
+            "students": students,
         }
 
     def assignments_progress(self, batch_id: UUID) -> dict:

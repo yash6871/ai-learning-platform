@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  getBatchesSummary, getBatchDetail, getMySummary,
-  BatchSummaryRow, BatchDetail, FacultyActivitySummary,
-} from "../../api/facultyApi";
+import { useNavigate } from "react-router-dom";
+import { getBatchesSummary, getMySummary, BatchSummaryRow, FacultyActivitySummary } from "../../api/facultyApi";
 import ArcLoader from "../../components/ArcLoader";
 
 function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
@@ -15,11 +13,10 @@ function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default function FacultyDashboard() {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState<FacultyActivitySummary | null>(null);
   const [batches, setBatches] = useState<BatchSummaryRow[]>([]);
-  const [detail, setDetail] = useState<BatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -27,16 +24,6 @@ export default function FacultyDashboard() {
       .then(([s, b]) => { setSummary(s); setBatches(b); })
       .finally(() => setLoading(false));
   }, []);
-
-  const openDetail = async (batchId: string) => {
-    setDetailLoading(true);
-    try {
-      const d = await getBatchDetail(batchId);
-      setDetail(d);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
 
   const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—");
 
@@ -51,7 +38,6 @@ export default function FacultyDashboard() {
         </p>
       </div>
 
-      {/* My activity summary */}
       {summary && (
         <div>
           <h2 className="text-sm font-semibold text-slate-500 uppercase mb-2">My Activity</h2>
@@ -65,10 +51,9 @@ export default function FacultyDashboard() {
         </div>
       )}
 
-      {/* Batches table */}
       <div>
         <h2 className="text-sm font-semibold text-slate-500 uppercase mb-2">
-          Assigned Batches ({batches.length})
+          Assigned Batches ({batches.length}) — click a batch to open its full page
         </h2>
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
@@ -85,7 +70,7 @@ export default function FacultyDashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {batches.map((b) => (
-                <tr key={b.batchId} onClick={() => openDetail(b.batchId)}
+                <tr key={b.batchId} onClick={() => navigate(`/faculty/batches/${b.batchId}`)}
                   className="cursor-pointer hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-800">{b.batchName}</p>
@@ -119,37 +104,6 @@ export default function FacultyDashboard() {
           </table>
         </div>
       </div>
-
-      {/* Batch detail modal */}
-      {(detail || detailLoading) && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
-          <div className="bg-white rounded-xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
-            {detailLoading || !detail ? (
-              <ArcLoader label="Loading batch detail" />
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="font-semibold text-slate-800 text-lg">{detail.batchName}</h2>
-                    <p className="text-xs text-slate-400">{detail.course || "—"}</p>
-                  </div>
-                  <button onClick={() => setDetail(null)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <StatCard label="Start Date" value={fmtDate(detail.startDate)} />
-                  <StatCard label="Expected End" value={fmtDate(detail.endDate)} />
-                  <StatCard label="Delayed By" value={detail.delayedByDays > 0 ? `${detail.delayedByDays} days` : "On track"} />
-                  <StatCard label="Syllabus" value={`${detail.syllabusPercent}%`} />
-                  <StatCard label="Batch Time" value={detail.batchTime || "—"} />
-                  <StatCard label="Assessments Given" value={detail.assessmentsGiven} />
-                  <StatCard label="Total Students" value={detail.studentsCount} />
-                  <StatCard label="Active / Inactive" value={`${detail.activeStudents} / ${detail.inactiveStudents}`} />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

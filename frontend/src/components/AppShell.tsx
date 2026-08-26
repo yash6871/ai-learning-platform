@@ -44,7 +44,7 @@ interface NavGroup { label: string; items: NavItem[]; collapsible?: boolean; }
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "Overview",
-    items: [{ to: "/dashboard", label: "Dashboard", roles: ["super_admin","admin","faculty","trainer","hr","placement_coordinator","student","guest"], icon: Icons.dashboard }],
+    items: [{ to: "/dashboard", label: "Dashboard", roles: ["super_admin","admin","hr","placement_coordinator","counsellor","manager","guest"], icon: Icons.dashboard }],
   },
   {
     label: "Registration",
