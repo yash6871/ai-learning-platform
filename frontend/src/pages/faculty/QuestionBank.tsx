@@ -273,9 +273,11 @@ export default function QuestionBankPage() {
                   )}
                   {q.type === "sql" && (
                     <div className="space-y-1 text-slate-600">
-                      {data.schema && <p><span className="font-medium">Schema:</span> {data.schema}</p>}
-                      {data.expectedQuery && (
-                        <p><span className="font-medium">Expected query:</span> <code className="bg-slate-50 px-1 rounded">{data.expectedQuery}</code></p>
+                      {(data.schemaDisplay || data.schema) && (
+                        <p className="whitespace-pre-wrap"><span className="font-medium">Schema:</span> {data.schemaDisplay || data.schema}</p>
+                      )}
+                      {(data.correctQuery || data.expectedQuery) && (
+                        <p><span className="font-medium">Correct query:</span> <code className="bg-slate-50 px-1 rounded">{data.correctQuery || data.expectedQuery}</code></p>
                       )}
                     </div>
                   )}
@@ -285,7 +287,7 @@ export default function QuestionBankPage() {
                   {q.type === "coding" && (
                     <p className="text-slate-500">Coding question — starter code & test cases are shown when this question is opened in an assessment.</p>
                   )}
-                  {!data.options && !data.expectedQuery && !data.guidelines && q.type !== "coding" && (
+                  {!data.options && !data.expectedQuery && !data.correctQuery && !data.guidelines && q.type !== "coding" && (
                     <p className="text-slate-400">No answer key stored for this question.</p>
                   )}
                 </div>

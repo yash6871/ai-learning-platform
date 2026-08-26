@@ -24,16 +24,21 @@ Return STRICT JSON with this exact shape (a JSON array), no extra text:
 
 Rules per type:
 - mcq: data must be {{"options": ["<option 1 text>", "<option 2 text>", "<option 3 text>", "<option 4 text>"], "correctOption": "<must be an EXACT copy of one of the strings in options>"}}. Do NOT use letters like "A"/"B" for correctOption — copy the full option text.
-- sql: Write in the exact LeetCode question style, matching this structure precisely. `questionText` must contain, in order, using literal newlines (as \\n in the JSON string):
-  (1) A one-sentence problem description.
-  (2) For each table involved, a schema block:
-      "Table: <Name>\\n\\n+-------------+------+\\n| Column Name | Type |\\n+-------------+------+\\n| <col1>      | <type1> |\\n| <col2>      | <type2> |\\n+-------------+------+\\n\\n<one sentence on the primary key / what each row represents>"
-      (pad the box-drawing characters so columns visually line up, like a real LeetCode schema box; use 2+ tables if the problem naturally needs a join).
-  (3) "Write a solution to <restate the task in one sentence>."
-  (4) "Example:\\nInput:\\n<Table name> table:\\n+----+--------+\\n| col | col |\\n+----+--------+\\n| ... sample rows ...\\n+----+--------+\\n\\nOutput:\\n+---------------+\\n| <ResultColumn> |\\n+---------------+\\n| ... expected rows ...\\n+---------------+"
-  `data` must be {{"schemaSql": "<valid SQLite CREATE TABLE + INSERT statements that build the EXACT same example rows shown in questionText's Example section>", "schemaDisplay": "<the Table/columns box(es) from step 2, for the UI to render separately>"}}.
-  `testCases`: exactly 2 items, "input" left as an empty string. "expectedOutput" is NOT shown to students and is only used for automated grading, so keep it simple regardless of how fancy questionText is: one row per line, values separated by " | ", header row first (e.g. "salary\\n200" or "name | salary | department\\nAmit | 70000 | IT").
-  Keep schemaSql itself simple and syntactically correct SQLite — that part is executed for real, so correctness there matters far more than in the display text.
+- sql: Match this EXACT style — here is a complete worked example for a "Second Highest Salary" question. Produce every generated SQL question in exactly this shape, changing only the problem/table/data to fit the requested topic:
+  {{
+    "questionText": "Write a solution to find the second highest distinct salary from the Employee table. If there is no second highest salary, return null.\\n\\nTable: Employee\\n+-------------+------+\\n| Column Name | Type |\\n+-------------+------+\\n| id          | int  |\\n| salary      | int  |\\n+-------------+------+\\nid is the primary key for this table. Each row has the salary of an employee.\\n\\nExample:\\nInput:\\nEmployee table:\\n+----+--------+\\n| id | salary |\\n+----+--------+\\n| 1  | 100    |\\n| 2  | 200    |\\n| 3  | 300    |\\n+----+--------+\\nOutput:\\n+---------------------+\\n| SecondHighestSalary |\\n+---------------------+\\n| 200                 |\\n+---------------------+",
+    "marks": 1,
+    "data": {{
+      "schemaSql": "CREATE TABLE Employee (id INTEGER, salary INTEGER); INSERT INTO Employee VALUES (1,100),(2,200),(3,300);",
+      "schemaDisplay": "Table: Employee\\n+-------------+------+\\n| Column Name | Type |\\n+-------------+------+\\n| id          | int  |\\n| salary      | int  |\\n+-------------+------+",
+      "correctQuery": "SELECT MAX(salary) AS SecondHighestSalary FROM Employee WHERE salary < (SELECT MAX(salary) FROM Employee);"
+    }},
+    "testCases": [
+      {{"input": "", "expectedOutput": "SecondHighestSalary\\n200", "isHidden": false}},
+      {{"input": "", "expectedOutput": "SecondHighestSalary\\n200", "isHidden": true}}
+    ]
+  }}
+  Keep the ASCII box borders (+---+ style, aligned) inside questionText and schemaDisplay exactly like the example above — this is the part students read. schemaSql must be valid, executable SQLite that builds the SAME rows shown in the Example section. correctQuery must be the actual correct SQLite query that solves the problem. testCases' expectedOutput is grading-only (never shown to students) — always plain "header\\nvalue" rows separated by " | ", never the ASCII box style.
 - descriptive: data must be {{"guidelines": "key points expected in the answer"}}
 - coding: include starterCode, language, and 3-5 testCases (at least 1 not hidden)
 """
