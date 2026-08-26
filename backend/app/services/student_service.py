@@ -252,6 +252,29 @@ class StudentService:
         result = existing or self.repo.create_result(assessment_id, user_id)
 
         questions = self.repo.get_questions_for_assessment(assessment_id)
+
+        # For coding/SQL questions, fetch the visible (non-hidden) test
+        # cases so the student can see the exact I/O contract (or, for SQL,
+        # the schema + expected result) before writing their answer.
+        sample_tests_by_qid: dict = {}
+        code_or_sql_qids = [q["id"] for q in questions if q["type"] in ("coding", "sql")]
+        if code_or_sql_qids:
+            from app.models.assessment import CodingQuestion, TestCase
+            cqs = self.db.query(CodingQuestion).filter(CodingQuestion.question_id.in_(code_or_sql_qids)).all()
+            cq_by_question_id = {str(cq.question_id): cq.id for cq in cqs}
+            if cq_by_question_id:
+                tests = self.db.query(TestCase).filter(
+                    TestCase.coding_question_id.in_(cq_by_question_id.values()),
+                    TestCase.is_hidden.is_(False),
+                ).all()
+                cq_id_to_question_id = {v: k for k, v in cq_by_question_id.items()}
+                for t in tests:
+                    qid = cq_id_to_question_id.get(t.coding_question_id)
+                    if qid:
+                        sample_tests_by_qid.setdefault(qid, []).append(
+                            sc.TestCaseOut(id=t.id, input=t.input, expected_output=t.expected_output, is_hidden=t.is_hidden)
+                        )
+
         return sc.AssessmentAttemptOut(
             result_id=result["id"],
             assessment_id=assessment_id,
@@ -262,6 +285,7 @@ class StudentService:
                 sc.QuestionForAttempt(
                     id=q["id"], question_text=q["question_text"], type=q["type"],
                     options=_visible_options(q), marks=q["marks"],
+                    sample_test_cases=sample_tests_by_qid.get(str(q["id"])) or None,
                 )
                 for q in questions
             ],

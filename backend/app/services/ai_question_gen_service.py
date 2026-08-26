@@ -24,43 +24,10 @@ Return STRICT JSON with this exact shape (a JSON array), no extra text:
 
 Rules per type:
 - mcq: data must be {{"options": ["<option 1 text>", "<option 2 text>", "<option 3 text>", "<option 4 text>"], "correctOption": "<must be an EXACT copy of one of the strings in options>"}}. Do NOT use letters like "A"/"B" for correctOption — copy the full option text.
-- sql: data must be {{"schema": "...", "expectedQuery": "..."}}
+- sql: Follow the LeetCode question style exactly. `questionText` MUST include, in this order: (1) the problem description, (2) a schema block starting with "Table: <Name>" followed by a plain-text box showing each column name and type (use +---+ style borders like a terminal table), (3) one "Example:" section showing sample "Input:" rows (as a plain-text table) and the expected "Output:" (as a plain-text table) for that exact input. `data` must be {{"schemaSql": "<valid SQLite CREATE TABLE + INSERT statements that build the SAME example data shown in questionText — this is executed for real, so it must be syntactically correct SQLite>", "schemaDisplay": "<the same 'Table: Name' box, repeated here for the UI to render separately from the question text>"}}. `testCases`: 2-3 cases, each with "input" left as an empty string (SQL questions don't take stdin) and "expectedOutput" set to the exact result rows the correct query would return against schemaSql, formatted as a plain-text table with " | " between column values, a header row of column names, and a "-+-" separator row beneath it (e.g. "id | salary\\n---+-------\\n2  | 200"). At least 1 test case must be visible (isHidden: false).
 - descriptive: data must be {{"guidelines": "key points expected in the answer"}}
-- coding: The code is executed as a full Python script: it is fed the testCase "input" on stdin, and its printed stdout is compared verbatim against "expectedOutput". Follow ALL of these or the question is unsolvable:
-  1. questionText MUST explicitly state the exact input format (what to read from stdin, e.g. "Read a single line string") and the exact output format (what to print, e.g. "Print True or False").
-  2. starterCode MUST already include the boilerplate that reads from stdin (e.g. `s = input()`) and prints the result (e.g. `print(is_palindrome(s))`) — the student only fills in the function body between a `# TODO: implement` marker. Never hand back a starterCode that only defines a function signature with no I/O wrapper.
-  3. Every testCase's "expectedOutput" MUST be the exact stdout the reference solution would print (correct capitalization, e.g. Python's bare `print(True)` prints "True", not "true" or "Yes") for the given "input".
-  4. include starterCode, language, and 3-5 testCases (at least 1 not hidden).
+- coding: include starterCode, language, and 3-5 testCases (at least 1 not hidden)
 """
-
-
-import re
-
-_CITATION_LINK = re.compile(r"\[\d+\]\(https?://[^\s)]+\)")
-_EMPTY_BRACKET_SHELL = re.compile(r"\[[\s,]*\]")  # leftover "[, ]" / "[]" once links are stripped
-
-
-def _strip_citations(text):
-    """Some AI providers/models occasionally emit markdown-style citation
-    links (e.g. "[[1](https://...), [2](https://...)]") even for a plain
-    generation prompt with no search grounding requested. These have no
-    place in a question a student is meant to answer, so strip them
-    unconditionally rather than trusting any one provider not to add them."""
-    if not isinstance(text, str):
-        return text
-    cleaned = _CITATION_LINK.sub("", text)
-    cleaned = _EMPTY_BRACKET_SHELL.sub("", cleaned)
-    return re.sub(r"[ \t]{2,}", " ", cleaned).strip()
-
-
-def _strip_citations_deep(value):
-    if isinstance(value, str):
-        return _strip_citations(value)
-    if isinstance(value, list):
-        return [_strip_citations_deep(v) for v in value]
-    if isinstance(value, dict):
-        return {k: _strip_citations_deep(v) for k, v in value.items()}
-    return value
 
 
 class AIQuestionGenService:
@@ -97,7 +64,7 @@ class AIQuestionGenService:
                 and correct in options
             )
         if type_ == "sql":
-            return bool(data.get("expectedQuery"))
+            return bool(data.get("schemaSql")) and bool(item.get("testCases"))
         if type_ == "descriptive":
             return bool(data.get("guidelines"))
         if type_ == "coding":
@@ -110,7 +77,6 @@ class AIQuestionGenService:
             type=payload.type, topic=payload.topic,
         )
         items, tokens_used = self.client.generate_json(prompt)
-        items = [_strip_citations_deep(item) for item in items]
 
         if payload.type == "mcq":
             for item in items:
@@ -126,10 +92,10 @@ class AIQuestionGenService:
                     marks=item.get("marks", 1), created_by=requested_by,
                     tags=[payload.topic, "ai-generated"], data=item.get("data"),
                 )
-                if payload.type == "coding":
+                if payload.type in ("coding", "sql"):
                     self.repo.attach_coding_details(
                         question_id=q.id, starter_code=item.get("starterCode"),
-                        language=item.get("language", "python"),
+                        language=item.get("language", "python") if payload.type == "coding" else "sql",
                         test_cases=item.get("testCases", []),
                     )
                 generated.append(QuestionOut(

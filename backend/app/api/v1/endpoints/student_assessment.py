@@ -6,7 +6,7 @@ from app.database import get_db
 from app.utils.auth import require_student, CurrentUser
 from app.services.student_service import StudentService
 from app.schemas import student_schemas as sc
-from app.models.assessment import ProctorSnapshot, Result, CodingQuestion, TestCase
+from app.models.assessment import ProctorSnapshot, Result, CodingQuestion, TestCase, Question
 from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
@@ -233,6 +233,41 @@ async def run_code(
     run and returned alongside the plain stdin run so the student can see
     pass/fail immediately."""
     lang = payload.language.lower()
+
+    if lang == "sql":
+        from app.utils.local_sql_runner import run_sql, run_sql_test_cases
+        from starlette.concurrency import run_in_threadpool
+
+        schema_sql = ""
+        cq = None
+        if payload.questionId:
+            cq = db.query(CodingQuestion).filter(CodingQuestion.question_id == payload.questionId).first()
+            if cq:
+                question = db.query(Question).filter(Question.id == payload.questionId).first()
+                if question and question.data:
+                    schema_sql = question.data.get("schemaSql") or ""
+
+        r = await run_in_threadpool(run_sql, schema_sql, payload.code)
+        result = {
+            "status": "Time Limit Exceeded" if r.timed_out else ("Accepted" if not r.error else "Runtime Error"),
+            "stdout": r.as_text(), "stderr": r.error or "",
+            "compile_output": "", "exit_code": 0 if not r.error else 1,
+        }
+
+        if cq:
+            test_cases = db.query(TestCase).filter(TestCase.coding_question_id == cq.id).all()
+            if test_cases:
+                tc_payload = [
+                    {"id": str(tc.id), "input": tc.input, "expected_output": tc.expected_output,
+                     "is_hidden": tc.is_hidden}
+                    for tc in test_cases
+                ]
+                tc_results = await run_in_threadpool(run_sql_test_cases, schema_sql, payload.code, tc_payload)
+                result["testResults"] = tc_results
+                result["testsPassed"] = sum(1 for t in tc_results if t["passed"])
+                result["testsTotal"] = len(tc_results)
+
+        return result
 
     if lang in ("python", "python3"):
         from app.utils.local_python_runner import run_python, run_test_cases

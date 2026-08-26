@@ -204,7 +204,7 @@ export interface QuestionForAttempt {
   marks: number;
   /** Coding questions only: visible (non-hidden) test cases so the student
    * knows the exact I/O contract before writing code. */
-  sampleTestCases?: { input?: string; expectedOutput?: string }[] | null;
+  sampleTestCases?: { id: string; input?: string; expectedOutput?: string }[] | null;
 }
 
 export interface AvailableAssessment {
@@ -495,6 +495,7 @@ export interface BatchOut {
   start_date?: string;
   end_date?: string;
   status: string;
+  facultyName?: string | null;
 }
 
 export interface PaymentOut {

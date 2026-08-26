@@ -175,6 +175,10 @@ class QuestionForAttempt(CamelModel):
     # this payload goes straight to the student's browser.
     options: Optional[List[str]] = None
     marks: float
+    # Coding/SQL questions only: visible (non-hidden) test cases so the
+    # student knows the exact I/O contract (or schema + expected result)
+    # before writing their answer.
+    sample_test_cases: Optional[List["TestCaseOut"]] = None
 
 
 class AssessmentAttemptOut(CamelModel):
